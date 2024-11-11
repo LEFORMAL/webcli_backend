@@ -40,6 +40,19 @@ async function connectMySQL() {
     }
 }
 
+// Ruta para obtener los tipos de solicitud
+app.get('/api/tipos_solicitud', async (req, res) => {
+    try {
+        const connection = await connectMySQL();
+        const [rows] = await connection.execute('SELECT * FROM tipos_solicitud');
+        await connection.end();
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al obtener los tipos de solicitud:', error);
+        res.status(500).json({ error: 'Error al obtener los tipos de solicitud' });
+    }
+});
+
 async function withOracleConnection(callback) {
     let connection;
     try {
