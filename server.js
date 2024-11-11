@@ -212,7 +212,7 @@ app.post('/request-password-reset', async (req, res) => {
         );
 
         // Enviar el enlace de restablecimiento por correo
-        const resetLink = `https://miapp.github.io/nueva_password?token=${token}&email=${email}`;
+        const resetLink = `https://leformal.github.io/webcli_frontend/nueva_password.html?token=${token}&email=${email}`;
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
