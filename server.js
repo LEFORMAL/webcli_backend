@@ -341,43 +341,48 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
-// Ruta para crear una solicitud transferencia
-// Ruta para crear una solicitud transferencia
-app.post('/api/solicitud_transferencia', async (req, res) => {
-    const {
-        nombre, rut, telefono, email, direccion, cantidad,
-        marca, modelo, necesitaCompra, tipoSolicitud,
-        fechaSolicitud, fechaRealizacion, descripcion, medioPago, costoTotal
-    } = req.body;
+// Ruta para manejar el éxito del pago
+app.get('/api/pago_exitoso', async (req, res) => {
+    const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
+
+    console.log('Datos recibidos de Mercado Pago:', req.query); // Depuración
+
+    // Asegurarse de que todos los parámetros tengan valores válidos
+    const tipoSolicitud = req.query.tipoSolicitud || null;
+    const fechaSolicitud = req.query.fechaSolicitud || null;
+    const descripcion = req.query.descripcion || null;
+    const direccion = req.query.direccion || null;
+    const rut = req.query.rut || null;
+    const nombre = req.query.nombre || null;
+    const telefono = req.query.telefono || null;
+    const email = req.query.email || null;
+    const cantidad = req.query.cantidad || null;
+    const marca = req.query.marca || null;
+    const modelo = req.query.modelo || null;
+    const necesitaCompra = req.query.necesitaCompra ? 'Y' : 'N';
+    const fechaRealizacion = req.query.fechaRealizacion || null;
+    const medioPago = req.query.medioPago || null;
+    const costoTotal = req.query.costoTotal || null;
+
+    // Agregar logs para depuración
+    console.log('tipoSolicitud:', tipoSolicitud);
+    console.log('fechaSolicitud:', fechaSolicitud);
+    console.log('descripcion:', descripcion);
+    console.log('direccion:', direccion);
+    console.log('rut:', rut);
+    console.log('nombre:', nombre);
+    console.log('telefono:', telefono);
+    console.log('email:', email);
+    console.log('cantidad:', cantidad);
+    console.log('marca:', marca);
+    console.log('modelo:', modelo);
+    console.log('necesitaCompra:', necesitaCompra);
+    console.log('fechaRealizacion:', fechaRealizacion);
+    console.log('medioPago:', medioPago);
+    console.log('costoTotal:', costoTotal);
 
     try {
         const connection = await connectMySQL();
-
-        // Verificar si el usuario está registrado
-        const sqlUsuario = 'SELECT * FROM USUARIOS WHERE rut = ?';
-        const [resultUsuario] = await connection.execute(sqlUsuario, [rut]);
-
-        console.log(resultUsuario);  // Imprimir para revisar la estructura de resultUsuario
-
-        let rutUsuario = rut;
-
-        // Verificar si resultUsuario tiene datos
-        if (!resultUsuario || resultUsuario.length === 0) {
-            // Si no está registrado, insertar un nuevo usuario invitado
-            const sqlInsertInvitado = `INSERT INTO INVITADOS (nombre, rut, telefono, email, direccion)
-                                       VALUES (?, ?, ?, ?, ?)`;
-
-            await connection.execute(sqlInsertInvitado, [
-                nombre,
-                rut,
-                telefono,
-                email,
-                direccion
-            ]);
-
-            // Usar el RUT del invitado para la solicitud
-            rutUsuario = rut;
-        }
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO SOLICITUD (
@@ -386,18 +391,18 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
             cantidad_productos, marca_producto, modelo_producto, 
             necesita_compra, fecha_realizacion, medio_pago, costo_total
         ) VALUES (
-            ?, STR_TO_DATE(?, '%Y-%m-%d'), ?, ?, 
+            ?, ?, ?, ?, 
             ?, ?, ?, ?, ?, 
             ?, ?, ?, 
-            ?, STR_TO_DATE(?, '%Y-%m-%d'), ?, ?
+            ?, ?, ?, ?
         )`;
 
-        await connection.execute(sqlSolicitud, [
+        const [resultSolicitud] = await connection.execute(sqlSolicitud, [
             tipoSolicitud,
             fechaSolicitud,
             descripcion,
             direccion,
-            rutUsuario,
+            rut,
             nombre,
             rut,
             telefono,
@@ -405,32 +410,34 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
             cantidad,
             marca,
             modelo,
-            necesitaCompra ? 'Y' : 'N',
+            necesitaCompra,
             fechaRealizacion,
             medioPago,
             costoTotal
         ]);
 
-        // Obtener el id_solicitud generado automáticamente
-        const [resultSolicitud] = await connection.execute('SELECT LAST_INSERT_ID() AS id_solicitud');
-        const id_solicitud = resultSolicitud[0].id_solicitud;
+        const id_solicitud = resultSolicitud.insertId;
 
-        await connection.close();
+        // Insertar el pago en la tabla PAGOS
+        const sqlPago = `INSERT INTO PAGOS (
+            total, medio_pago, fecha_transaccion, id_solicitud
+        ) VALUES (
+            ?, ?, NOW(), ?
+        )`;
 
-        // Enviar el correo electrónico con la información de transferencia
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Información de Transferencia Bancaria',
-            text: `Estimado ${nombre},\n\nGracias por su solicitud de servicio. A continuación, encontrará la información para realizar la transferencia bancaria:\n\nBanco: [Nombre del Banco]\nCuenta: [Número de Cuenta]\nTitular: [Nombre del Titular]\nMonto: $${costoTotal}\n\nPor favor, envíe el comprobante de la transferencia a este correo electrónico para confirmar su solicitud.\n\nSaludos,\n[Nombre de la Empresa]`
-        };
+        const [resultPago] = await connection.execute(sqlPago, [
+            costoTotal,
+            medioPago,
+            id_solicitud
+        ]);
 
-        await transporter.sendMail(mailOptions);
+        await connection.end();
 
-        res.status(200).json({ message: 'Solicitud creada con éxito', id_solicitud });
+        // Redirigir a la página de éxito
+        res.redirect('/pago_exitoso.html');
     } catch (error) {
-        console.error('Error al crear la solicitud:', error);
-        res.status(500).json({ error: 'Error al crear la solicitud', details: error.message });
+        console.error('Error al guardar la solicitud y el pago:', error);
+        res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
     }
 });
 // Ruta para manejar el éxito del pago
