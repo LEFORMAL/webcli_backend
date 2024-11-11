@@ -447,7 +447,7 @@ app.get('/api/pago_exitoso', async (req, res) => {
         const connection = await connectMySQL();
 
         // Insertar la solicitud en la tabla SOLICITUD
-        const sqlSolicitud = `INSERT INTO solicitud (
+        const sqlSolicitud = `INSERT INTO SOLICITUD (
             tipo_solicitud, fecha_solicitud, descripcion, direccion, 
             rut_usuario, nombre, rut_nit, telefono, email, 
             cantidad_productos, marca_producto, modelo_producto, 
@@ -481,7 +481,7 @@ app.get('/api/pago_exitoso', async (req, res) => {
         const id_solicitud = resultSolicitud.insertId;
 
         // Insertar el pago en la tabla PAGOS
-        const sqlPago = `INSERT INTO pagos (
+        const sqlPago = `INSERT INTO PAGOS (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
             ?, ?, NOW(), ?
