@@ -137,8 +137,8 @@ app.post('/login', async (req, res) => {
 
     try {
         const connection = await connectMySQL();
-        const sql = 'SELECT * FROM USUARIOS WHERE email = :email';
-        const [rows] = await connection.execute(sql, { email });
+        const sql = 'SELECT * FROM USUARIOS WHERE email = ?';
+        const [rows] = await connection.execute(sql, [email]);
 
         if (rows.length === 0) {
             await connection.end();
@@ -147,6 +147,11 @@ app.post('/login', async (req, res) => {
 
         const usuario = rows[0];
         const hashedPassword = usuario.contrasena;
+
+        if (!hashedPassword) {
+            await connection.end();
+            return res.status(500).json({ message: 'Error en el servidor: contraseña no encontrada' });
+        }
 
         const match = await bcrypt.compare(contrasena, hashedPassword);
 
