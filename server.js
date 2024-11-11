@@ -224,7 +224,7 @@ app.get('/api/productos', async (req, res) => {
         const connection = await connectMySQL();
         console.log("Conexión establecida correctamente");
 
-        const sql = 'SELECT DISTINCT marca_producto, modelo_producto, valor_producto FROM productos ORDER BY marca_producto, modelo_producto';
+        const sql = 'SELECT DISTINCT MARCA_PRODUCTO, MODELO_PRODUCTO, VALOR_PRODUCTO FROM PRODUCTOS ORDER BY MARCA_PRODUCTO, MODELO_PRODUCTO';
         const [rows] = await connection.execute(sql);
 
         console.log("Consulta exitosa");
