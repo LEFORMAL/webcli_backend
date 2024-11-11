@@ -322,7 +322,6 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
-// Ruta para crear una solicitud con pago por transferencia
 app.post('/api/solicitud_transferencia', async (req, res) => {
     const {
         nombre, rut, telefono, email, direccion, cantidad,
@@ -337,10 +336,13 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         const sqlUsuario = 'SELECT * FROM USUARIOS WHERE rut = :rut';
         const resultUsuario = await connection.execute(sqlUsuario, { rut });
 
+        console.log(resultUsuario);  // Imprimir para revisar la estructura de resultUsuario
+
         let rutUsuario = rut;
 
-        if (resultUsuario.rows.length === 0) {
-            // Insertar un nuevo usuario invitado
+        // Verificar si resultUsuario.rows es un array y tiene datos
+        if (!resultUsuario || !resultUsuario.rows || resultUsuario.rows.length === 0) {
+            // Si no está registrado, insertar un nuevo usuario invitado
             const sqlInsertInvitado = `INSERT INTO invitados (id_invitado, nombre, rut, telefono, email, direccion)
                                        VALUES (invitados_seq.NEXTVAL, :nombre, :rut, :telefono, :email, :direccion)`;
             await connection.execute(sqlInsertInvitado, {
@@ -408,6 +410,7 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la solicitud', details: error.message });
     }
 });
+
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
