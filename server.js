@@ -343,19 +343,20 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         // Verificar si resultUsuario.rows es un array y tiene datos
         if (!resultUsuario || !resultUsuario.rows || resultUsuario.rows.length === 0) {
             // Si no está registrado, insertar un nuevo usuario invitado
-            const sqlInsertInvitado = `INSERT INTO INVITADOS (id_invitado, nombre, rut, telefono, email, direccion)
-                                       VALUES (invitados_seq.NEXTVAL, :nombre, :rut, :telefono, :email, :direccion)`;
-            await connection.execute(sqlInsertInvitado, {
+            const sqlInsertInvitado = `INSERT INTO INVITADOS (nombre, rut, telefono, email, direccion)
+                                       VALUES (?, ?, ?, ?, ?)`;
+        
+            await connection.execute(sqlInsertInvitado, [
                 nombre,
                 rut,
                 telefono,
                 email,
                 direccion
-            }, { autoCommit: true });
-
+            ], { autoCommit: true });
+        
             // Usar el RUT del invitado para la solicitud
             rutUsuario = rut;
-        }
+        }        
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO solicitud (
