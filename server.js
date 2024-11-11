@@ -84,11 +84,12 @@ function verificarToken(token) {
             token = token.slice(7, token.length).trim();
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return decoded.email;
+        return { email: decoded.email, expired: false };
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
             console.error('Error al verificar el token: Token expirado');
-            return 'expired';
+            const decoded = jwt.decode(token);
+            return { email: decoded.email, expired: true };
         } else {
             console.error('Error al verificar el token:', error);
             return null;
@@ -547,19 +548,17 @@ app.post('/actualizarPerfil', async (req, res) => {
         res.status(500).json({ message: 'Error al actualizar el perfil' });
     }
 });
-
-// Ruta para obtener las solicitudes del usuario
 // Ruta para obtener las solicitudes del usuario
 app.get('/obtenerSolicitudes', async (req, res) => {
     const token = req.headers['authorization'];
     console.log('Token en la solicitud'); // Confirma token en la consola
-    const email = verificarToken(token);
+    const tokenData = verificarToken(token);
 
-    if (email === 'expired') {
-        return res.status(401).send('Token expirado');
-    } else if (!email) {
-        return res.status(401).send('Token inválido');
+    if (!tokenData) {
+        return res.status(401).json({ message: 'Token inválido' });
     }
+
+    const { email, expired } = tokenData;
 
     try {
         const connection = await connectMySQL();
@@ -569,7 +568,14 @@ app.get('/obtenerSolicitudes', async (req, res) => {
         );
 
         console.log('Solicitudes obtenidas'); // Confirma datos obtenidos
-        res.json(result);
+
+        if (expired) {
+            const newToken = generarToken(email);
+            res.json({ solicitudes: result, newToken });
+        } else {
+            res.json(result);
+        }
+
         await connection.close();
     } catch (error) {
         console.error('Error al obtener las solicitudes:', error);
