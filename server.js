@@ -334,7 +334,7 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         const connection = await connectMySQL();
 
         // Verificar si el usuario está registrado
-        const sqlUsuario = 'SELECT * FROM usuarios WHERE rut = :rut';
+        const sqlUsuario = 'SELECT * FROM USUARIOS WHERE rut = :rut';
         const resultUsuario = await connection.execute(sqlUsuario, { rut });
 
         let rutUsuario = rut;
@@ -492,7 +492,7 @@ app.post('/actualizarPerfil', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
-        const sql = `UPDATE usuarios 
+        const sql = `UPDATE USUARIOS
                      SET nombres = :nombres,
                          apellidos = :apellidos,
                          telefono = :telefono,
