@@ -138,20 +138,20 @@ app.post('/login', async (req, res) => {
     try {
         const connection = await connectMySQL();
         const sql = 'SELECT * FROM usuarios WHERE email = :email';
-        const result = await connection.execute(sql, [email]);
+        const [rows] = await connection.execute(sql, { email });
 
-        if (result.rows.length === 0) {
-            await connection.close();
+        if (rows.length === 0) {
+            await connection.end();
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        const usuario = result.rows[0];
-        const hashedPassword = usuario.CONTRASENA || usuario[10]; // Cambia el índice 10 si es necesario
+        const usuario = rows[0];
+        const hashedPassword = usuario.contrasena;
 
         const match = await bcrypt.compare(contrasena, hashedPassword);
 
         if (!match) {
-            await connection.close();
+            await connection.end();
             return res.status(401).json({ message: 'Contraseña incorrecta' });
         }
 
@@ -161,16 +161,16 @@ app.post('/login', async (req, res) => {
             message: 'Login exitoso',
             token: token,
             usuario: {
-                rut: usuario.RUT || usuario[0],
-                nombres: usuario.NOMBRES || usuario[1],
-                apellidos: usuario.APELLIDOS || usuario[2],
-                email: usuario.EMAIL || usuario[4],
-                user_tipo: usuario.USER_TIPO || usuario[3],
-                telefono: usuario.TELEFONO || usuario[5]
+                rut: usuario.rut,
+                nombres: usuario.nombres,
+                apellidos: usuario.apellidos,
+                email: usuario.email,
+                user_tipo: usuario.user_tipo,
+                telefono: usuario.telefono
             }
         });
 
-        await connection.close();
+        await connection.end();
     } catch (err) {
         console.error('Error al buscar el usuario:', err);
         return res.status(500).json({ message: 'Error en el servidor' });
