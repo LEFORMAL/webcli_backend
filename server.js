@@ -2,7 +2,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const oracledb = require('oracledb');
+const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const mercadopago = require('mercadopago'); // Añadido para Mercado Pago
@@ -23,17 +23,18 @@ app.use(cors());
 app.use(express.json());
 
 // Configurar conexión a Oracle Database
-async function connectOracle() {
+async function connectMySQL() {
     try {
-        const connection = await oracledb.getConnection({
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
-            connectString: process.env.DB_CONNECT_STRING
+            database: process.env.DB_NAME
         });
-        console.log("Conexión exitosa a Oracle XE");
+        console.log("Conexión exitosa a MySQL");
         return connection;
     } catch (error) {
-        console.error("Error al conectar con Oracle XE:", error);
+        console.error("Error al conectar con MySQL:", error);
         throw error;
     }
 }
@@ -41,7 +42,7 @@ async function connectOracle() {
 async function withOracleConnection(callback) {
     let connection;
     try {
-        connection = await connectOracle();
+        connection = await connectMySQL();
         await callback(connection);
     } catch (error) {
         console.error('Error en la base de datos:', error);
@@ -99,7 +100,7 @@ app.post('/register', async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(contrasena, 10);
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
 
         const sql = `INSERT INTO usuarios (rut, nombres, apellidos, user_tipo, email, telefono, direccion, comuna, region, fecha_nacimiento, contrasena)
                      VALUES (:rut, :nombres, :apellidos, :user_tipo, :email, :telefono, :direccion, :comuna, :region, TO_DATE(:fecha_nacimiento, 'YYYY-MM-DD'), :contrasena)`;
@@ -134,7 +135,7 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
         const sql = 'SELECT * FROM usuarios WHERE email = :email';
         const result = await connection.execute(sql, [email]);
 
@@ -180,7 +181,7 @@ app.post('/request-password-reset', async (req, res) => {
     const { email } = req.body;
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
         const sql = 'SELECT * FROM usuarios WHERE email = :email';
         const result = await connection.execute(sql, [email]);
 
@@ -220,7 +221,7 @@ app.post('/request-password-reset', async (req, res) => {
 // Ruta para obtener las marcas y modelos desde la base de datos
 app.get('/api/productos', async (req, res) => {
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
         console.log("Conexión establecida correctamente");
 
         const sql = 'SELECT DISTINCT marca_producto, modelo_producto, valor_producto FROM productos ORDER BY marca_producto, modelo_producto';
@@ -287,7 +288,7 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
     } = req.body;
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
 
         // Verificar si el usuario está registrado
         const sqlUsuario = 'SELECT * FROM usuarios WHERE rut = :rut';
@@ -370,7 +371,7 @@ app.get('/api/pago_exitoso', async (req, res) => {
     const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO solicitud (
@@ -451,7 +452,7 @@ app.post('/actualizarPerfil', async (req, res) => {
     }
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
 
         const sql = `UPDATE usuarios 
                      SET nombres = :nombres,
@@ -507,7 +508,7 @@ app.get('/obtenerSolicitudes', async (req, res) => {
     }
 
     try {
-        const connection = await connectOracle();
+        const connection = await connectMySQL();
         const result = await connection.execute(
             `SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", direccion AS "DIRECCION", comuna AS "COMUNA", region AS "REGION", rut_usuario AS "RUT_USUARIO", nombre AS "NOMBRE", rut_nit AS "RUT_NIT", telefono AS "TELEFONO", email AS "EMAIL", cantidad_productos AS "CANTIDAD_PRODUCTOS", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", necesita_compra AS "NECESITA_COMPRA", fecha_realizacion AS "FECHA_REALIZACION", medio_pago AS "MEDIO_PAGO", costo_total AS "COSTO_TOTAL", fecha_creacion AS "FECHA_CREACION" FROM solicitud WHERE email = :email`,
             [email]
