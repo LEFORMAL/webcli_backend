@@ -420,11 +420,28 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la solicitud', details: error.message });
     }
 });
-
-
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
+
+    console.log('Datos recibidos de Mercado Pago:', req.query); // Depuración
+
+    // Asegurarse de que todos los parámetros tengan valores válidos
+    const tipoSolicitud = req.query.tipoSolicitud || null;
+    const fechaSolicitud = req.query.fechaSolicitud || null;
+    const descripcion = req.query.descripcion || null;
+    const direccion = req.query.direccion || null;
+    const rut = req.query.rut || null;
+    const nombre = req.query.nombre || null;
+    const telefono = req.query.telefono || null;
+    const email = req.query.email || null;
+    const cantidad = req.query.cantidad || null;
+    const marca = req.query.marca || null;
+    const modelo = req.query.modelo || null;
+    const necesitaCompra = req.query.necesitaCompra ? 'Y' : 'N';
+    const fechaRealizacion = req.query.fechaRealizacion || null;
+    const medioPago = req.query.medioPago || null;
+    const costoTotal = req.query.costoTotal || null;
 
     try {
         const connection = await connectMySQL();
@@ -436,47 +453,51 @@ app.get('/api/pago_exitoso', async (req, res) => {
             cantidad_productos, marca_producto, modelo_producto, 
             necesita_compra, fecha_realizacion, medio_pago, costo_total
         ) VALUES (
-            ?, ?, ?, ?, 
+            ?, TO_DATE(?, 'YYYY-MM-DD'), ?, ?, 
             ?, ?, ?, ?, ?, 
             ?, ?, ?, 
-            ?, ?, ?, ?
-        )`;
+            ?, TO_DATE(?, 'YYYY-MM-DD'), ?, ?
+        ) RETURNING id_solicitud INTO :id_solicitud`;
 
-        const [resultSolicitud] = await connection.execute(sqlSolicitud, [
-            req.query.tipoSolicitud,
-            req.query.fechaSolicitud,
-            req.query.descripcion,
-            req.query.direccion,
-            req.query.rut,
-            req.query.nombre,
-            req.query.rut,
-            req.query.telefono,
-            req.query.email,
-            req.query.cantidad,
-            req.query.marca,
-            req.query.modelo,
-            req.query.necesitaCompra ? 'Y' : 'N',
-            req.query.fechaRealizacion,
-            req.query.medioPago,
-            req.query.costoTotal
-        ]);
+        const resultSolicitud = await connection.execute(sqlSolicitud, [
+            tipoSolicitud,
+            fechaSolicitud,
+            descripcion,
+            direccion,
+            rut,
+            nombre,
+            rut,
+            telefono,
+            email,
+            cantidad,
+            marca,
+            modelo,
+            necesitaCompra,
+            fechaRealizacion,
+            medioPago,
+            costoTotal,
+            { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        ], { autoCommit: true });
 
-        const id_solicitud = resultSolicitud.insertId;
+        const id_solicitud = resultSolicitud.outBinds.id_solicitud[0];
 
         // Insertar el pago en la tabla PAGOS
         const sqlPago = `INSERT INTO pagos (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
-            ?, ?, NOW(), ?
-        )`;
+            ?, ?, SYSDATE, ?
+        ) RETURNING id_transaccion INTO :id_transaccion`;
 
-        const [resultPago] = await connection.execute(sqlPago, [
-            req.query.costoTotal,
-            req.query.medioPago,
-            id_solicitud
-        ]);
+        const resultPago = await connection.execute(sqlPago, [
+            costoTotal,
+            medioPago,
+            id_solicitud,
+            { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        ], { autoCommit: true });
 
-        await connection.end();
+        const id_transaccion = resultPago.outBinds.id_transaccion[0];
+
+        await connection.close();
 
         // Redirigir a la página de éxito
         res.redirect('/pago_exitoso.html');
