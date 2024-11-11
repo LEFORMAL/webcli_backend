@@ -361,7 +361,7 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         }
 
         // Insertar la solicitud en la tabla SOLICITUD
-        const sqlSolicitud = `INSERT INTO solicitud (
+        const sqlSolicitud = `INSERT INTO SOLICITUD (
             tipo_solicitud, fecha_solicitud, descripcion, direccion, 
             rut_usuario, nombre, rut_nit, telefono, email, 
             cantidad_productos, marca_producto, modelo_producto, 
