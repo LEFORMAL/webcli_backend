@@ -453,13 +453,13 @@ app.get('/api/pago_exitoso', async (req, res) => {
             cantidad_productos, marca_producto, modelo_producto, 
             necesita_compra, fecha_realizacion, medio_pago, costo_total
         ) VALUES (
-            ?, TO_DATE(?, 'YYYY-MM-DD'), ?, ?, 
+            ?, ?, ?, ?, 
             ?, ?, ?, ?, ?, 
             ?, ?, ?, 
-            ?, TO_DATE(?, 'YYYY-MM-DD'), ?, ?
-        ) RETURNING id_solicitud INTO :id_solicitud`;
+            ?, ?, ?, ?
+        )`;
 
-        const resultSolicitud = await connection.execute(sqlSolicitud, [
+        const [resultSolicitud] = await connection.execute(sqlSolicitud, [
             tipoSolicitud,
             fechaSolicitud,
             descripcion,
@@ -475,29 +475,25 @@ app.get('/api/pago_exitoso', async (req, res) => {
             necesitaCompra,
             fechaRealizacion,
             medioPago,
-            costoTotal,
-            { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-        ], { autoCommit: true });
+            costoTotal
+        ]);
 
-        const id_solicitud = resultSolicitud.outBinds.id_solicitud[0];
+        const id_solicitud = resultSolicitud.insertId;
 
         // Insertar el pago en la tabla PAGOS
         const sqlPago = `INSERT INTO pagos (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
-            ?, ?, SYSDATE, ?
-        ) RETURNING id_transaccion INTO :id_transaccion`;
+            ?, ?, NOW(), ?
+        )`;
 
-        const resultPago = await connection.execute(sqlPago, [
+        const [resultPago] = await connection.execute(sqlPago, [
             costoTotal,
             medioPago,
-            id_solicitud,
-            { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-        ], { autoCommit: true });
+            id_solicitud
+        ]);
 
-        const id_transaccion = resultPago.outBinds.id_transaccion[0];
-
-        await connection.close();
+        await connection.end();
 
         // Redirigir a la página de éxito
         res.redirect('/pago_exitoso.html');
