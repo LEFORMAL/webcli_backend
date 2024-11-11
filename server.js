@@ -227,7 +227,34 @@ app.post('/request-password-reset', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+// Ruta para actualizar la contraseña
+app.post('/nueva_password', async (req, res) => {
+    const { token, email, newPassword } = req.body;
 
+    try {
+        const connection = await connectMySQL();
+        const sql = 'SELECT * FROM USUARIOS WHERE email = ? AND reset_token = ? AND reset_token_expiration > NOW()';
+        const [rows] = await connection.execute(sql, [email, token]);
+
+        if (rows.length === 0) {
+            await connection.end();
+            return res.status(400).send('Token inválido o expirado');
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await connection.execute(
+            'UPDATE USUARIOS SET contrasena = ?, reset_token = NULL, reset_token_expiration = NULL WHERE email = ?',
+            [hashedPassword, email]
+        );
+
+        res.status(200).send('Contraseña actualizada con éxito');
+        await connection.end();
+    } catch (error) {
+        console.error('Error al actualizar la contraseña:', error);
+        res.status(500).send('Error en el servidor');
+    }
+});
 // Ruta para obtener las marcas y modelos desde la base de datos
 app.get('/api/productos', async (req, res) => {
     try {
