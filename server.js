@@ -127,7 +127,6 @@ app.post('/register', async (req, res) => {
         return res.status(500).send('Error al registrar el usuario');
     }
 });
-
 app.post('/login', async (req, res) => {
     const { email, contrasena } = req.body;
 
@@ -137,7 +136,7 @@ app.post('/login', async (req, res) => {
 
     try {
         const connection = await connectMySQL();
-        const sql = 'SELECT * FROM USUARIOS WHERE email = ?';
+        const sql = 'SELECT * FROM usuarios WHERE email = ?';
         const [rows] = await connection.execute(sql, [email]);
 
         if (rows.length === 0) {
@@ -146,7 +145,11 @@ app.post('/login', async (req, res) => {
         }
 
         const usuario = rows[0];
-        const hashedPassword = usuario.contrasena;
+        const hashedPassword = usuario.CONTRASENA;
+
+        console.log('Email:', email);
+        console.log('Contraseña ingresada:', contrasena);
+        console.log('Contraseña almacenada:', hashedPassword);
 
         if (!hashedPassword) {
             await connection.end();
@@ -154,6 +157,8 @@ app.post('/login', async (req, res) => {
         }
 
         const match = await bcrypt.compare(contrasena, hashedPassword);
+
+        console.log('Resultado de bcrypt.compare:', match);
 
         if (!match) {
             await connection.end();
@@ -166,12 +171,12 @@ app.post('/login', async (req, res) => {
             message: 'Login exitoso',
             token: token,
             usuario: {
-                rut: usuario.rut,
-                nombres: usuario.nombres,
-                apellidos: usuario.apellidos,
-                email: usuario.email,
-                user_tipo: usuario.user_tipo,
-                telefono: usuario.telefono
+                rut: usuario.RUT,
+                nombres: usuario.NOMBRES,
+                apellidos: usuario.APELLIDOS,
+                email: usuario.EMAIL,
+                user_tipo: usuario.USER_TIPO,
+                telefono: usuario.TELEFONO
             }
         });
 
