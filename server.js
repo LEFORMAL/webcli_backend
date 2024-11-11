@@ -225,16 +225,16 @@ app.get('/api/productos', async (req, res) => {
         console.log("Conexión establecida correctamente");
 
         const sql = 'SELECT DISTINCT marca_producto, modelo_producto, valor_producto FROM productos ORDER BY marca_producto, modelo_producto';
-        const result = await connection.execute(sql);
+        const [rows] = await connection.execute(sql);
 
         console.log("Consulta exitosa");
 
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
             console.warn("No se encontraron productos en la base de datos.");
         }
 
-        res.json(result.rows);
-        await connection.close();
+        res.json(rows);
+        await connection.end();
     } catch (err) {
         console.error('Error al obtener marcas y modelos:', err);
         return res.status(500).json({ message: 'Error al obtener productos' });
