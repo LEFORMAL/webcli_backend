@@ -573,7 +573,7 @@ app.get('/obtenerSolicitudes', async (req, res) => {
             const newToken = generarToken(email);
             res.json({ solicitudes: result, newToken });
         } else {
-            res.json(result);
+            res.json({ solicitudes: result });
         }
 
         await connection.close();
