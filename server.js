@@ -240,6 +240,8 @@ app.post('/nueva_password', async (req, res) => {
         const sql = 'SELECT * FROM USUARIOS WHERE email = ? AND reset_token = ? AND reset_token_expiration > NOW()';
         const [rows] = await connection.execute(sql, [email, token]);
 
+        console.log('Filas encontradas:', rows);
+
         if (rows.length === 0) {
             await connection.end();
             return res.status(400).send('Token inválido o expirado');
