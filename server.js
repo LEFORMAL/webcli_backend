@@ -103,7 +103,7 @@ app.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(contrasena, 10);
         const connection = await connectMySQL();
 
-        const sql = `INSERT INTO usuarios (rut, nombres, apellidos, user_tipo, email, telefono, direccion, comuna, region, fecha_nacimiento, contrasena)
+        const sql = `INSERT INTO USUARIOS (rut, nombres, apellidos, user_tipo, email, telefono, direccion, comuna, region, fecha_nacimiento, contrasena)
                      VALUES (:rut, :nombres, :apellidos, :user_tipo, :email, :telefono, :direccion, :comuna, :region, :fecha_nacimiento, :contrasena)`;
 
         await connection.execute(sql, {
