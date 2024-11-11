@@ -29,7 +29,8 @@ async function connectMySQL() {
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME
+            database: process.env.DB_NAME,
+            namedPlaceholders: true // Habilitar named placeholders
         });
         console.log("Conexión exitosa a MySQL");
         return connection;
@@ -103,7 +104,7 @@ app.post('/register', async (req, res) => {
         const connection = await connectMySQL();
 
         const sql = `INSERT INTO usuarios (rut, nombres, apellidos, user_tipo, email, telefono, direccion, comuna, region, fecha_nacimiento, contrasena)
-                     VALUES (:rut, :nombres, :apellidos, :user_tipo, :email, :telefono, :direccion, :comuna, :region, TO_DATE(:fecha_nacimiento, 'YYYY-MM-DD'), :contrasena)`;
+                     VALUES (:rut, :nombres, :apellidos, :user_tipo, :email, :telefono, :direccion, :comuna, :region, :fecha_nacimiento, :contrasena)`;
 
         await connection.execute(sql, {
             rut,
@@ -117,10 +118,10 @@ app.post('/register', async (req, res) => {
             region,
             fecha_nacimiento,
             contrasena: hashedPassword
-        }, { autoCommit: true });
+        });
 
         res.status(200).send('Usuario registrado con éxito');
-        await connection.close();
+        await connection.end();
     } catch (err) {
         console.error('Error insertando usuario:', err);
         return res.status(500).send('Error al registrar el usuario');
