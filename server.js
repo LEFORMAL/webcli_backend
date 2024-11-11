@@ -300,13 +300,13 @@ app.post('/api/solicitud', async (req, res) => {
                     title: tipoSolicitud,
                     quantity: cantidad,
                     currency_id: 'CLP',
-                    unit_price: costoTotal,
+                    unit_price: parseFloat(costoTotal),
                 },
             ],
             back_urls: {
-                success: "http://localhost:3000/api/pago_exitoso",
-                failure: "http://localhost:3000/api/pago_fallido",
-                pending: "http://localhost:3000/api/pago_pendiente",
+                success: "https://webclibackend-production.up.railway.app/api/pago_exitoso",
+                failure: "https://webclibackend-production.up.railway.app/api/pago_fallido",
+                pending: "https://webclibackend-production.up.railway.app/api/pago_pendiente",
             },
             auto_return: "approved",
         };
@@ -408,7 +408,6 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la solicitud', details: error.message });
     }
 });
-
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
@@ -423,50 +422,47 @@ app.get('/api/pago_exitoso', async (req, res) => {
             cantidad_productos, marca_producto, modelo_producto, 
             necesita_compra, fecha_realizacion, medio_pago, costo_total
         ) VALUES (
-            :tipo_solicitud, TO_DATE(:fecha_solicitud, 'YYYY-MM-DD'), :descripcion, :direccion, 
-            :rut, :nombre, :rut, :telefono, :email, 
-            :cantidad, :marca, :modelo, 
-            :necesitaCompra, TO_DATE(:fecha_realizacion, 'YYYY-MM-DD'), :medio_pago, :costo_total
-        ) RETURNING id_solicitud INTO :id_solicitud`;
+            ?, ?, ?, ?, 
+            ?, ?, ?, ?, ?, 
+            ?, ?, ?, 
+            ?, ?, ?, ?
+        )`;
 
-        const resultSolicitud = await connection.execute(sqlSolicitud, {
-            tipo_solicitud: req.body.tipoSolicitud,
-            fecha_solicitud: req.body.fechaSolicitud,
-            descripcion: req.body.descripcion,
-            direccion: req.body.direccion,
-            rut: req.body.rut,
-            nombre: req.body.nombre,
-            telefono: req.body.telefono,
-            email: req.body.email,
-            cantidad: req.body.cantidad,
-            marca: req.body.marca,
-            modelo: req.body.modelo,
-            necesitaCompra: req.body.necesitaCompra ? 'Y' : 'N',
-            fecha_realizacion: req.body.fechaRealizacion,
-            medio_pago: req.body.medioPago,
-            costo_total: req.body.costoTotal,
-            id_solicitud: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-        }, { autoCommit: true });
+        const [resultSolicitud] = await connection.execute(sqlSolicitud, [
+            req.query.tipoSolicitud,
+            req.query.fechaSolicitud,
+            req.query.descripcion,
+            req.query.direccion,
+            req.query.rut,
+            req.query.nombre,
+            req.query.rut,
+            req.query.telefono,
+            req.query.email,
+            req.query.cantidad,
+            req.query.marca,
+            req.query.modelo,
+            req.query.necesitaCompra ? 'Y' : 'N',
+            req.query.fechaRealizacion,
+            req.query.medioPago,
+            req.query.costoTotal
+        ]);
 
-        const id_solicitud = resultSolicitud.outBinds.id_solicitud[0];
+        const id_solicitud = resultSolicitud.insertId;
 
         // Insertar el pago en la tabla PAGOS
         const sqlPago = `INSERT INTO pagos (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
-            :total, :medio_pago, SYSDATE, :id_solicitud
-        ) RETURNING id_transaccion INTO :id_transaccion`;
+            ?, ?, NOW(), ?
+        )`;
 
-        const resultPago = await connection.execute(sqlPago, {
-            total: req.body.costoTotal,
-            medio_pago: req.body.medioPago,
-            id_solicitud: id_solicitud,
-            id_transaccion: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-        }, { autoCommit: true });
+        const [resultPago] = await connection.execute(sqlPago, [
+            req.query.costoTotal,
+            req.query.medioPago,
+            id_solicitud
+        ]);
 
-        const id_transaccion = resultPago.outBinds.id_transaccion[0];
-
-        await connection.close();
+        await connection.end();
 
         // Redirigir a la página de éxito
         res.redirect('/pago_exitoso.html');
@@ -475,7 +471,6 @@ app.get('/api/pago_exitoso', async (req, res) => {
         res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
     }
 });
-
 // Ruta para manejar el fallo del pago
 app.get('/api/pago_fallido', (req, res) => {
     res.redirect('/pago_fallido.html');
