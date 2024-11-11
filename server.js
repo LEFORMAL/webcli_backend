@@ -86,8 +86,13 @@ function verificarToken(token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         return decoded.email;
     } catch (error) {
-        console.error('Error al verificar el token:', error);
-        return null;
+        if (error.name === 'TokenExpiredError') {
+            console.error('Error al verificar el token: Token expirado');
+            return 'expired';
+        } else {
+            console.error('Error al verificar el token:', error);
+            return null;
+        }
     }
 }
 
@@ -544,13 +549,16 @@ app.post('/actualizarPerfil', async (req, res) => {
 });
 
 // Ruta para obtener las solicitudes del usuario
+// Ruta para obtener las solicitudes del usuario
 app.get('/obtenerSolicitudes', async (req, res) => {
     const token = req.headers['authorization'];
     console.log('Token en la solicitud'); // Confirma token en la consola
     const email = verificarToken(token);
 
-    if (!email) {
-        return res.status(401).send('Token inválido o expirado');
+    if (email === 'expired') {
+        return res.status(401).send('Token expirado');
+    } else if (!email) {
+        return res.status(401).send('Token inválido');
     }
 
     try {
