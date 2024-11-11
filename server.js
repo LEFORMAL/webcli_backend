@@ -136,7 +136,7 @@ app.post('/login', async (req, res) => {
 
     try {
         const connection = await connectMySQL();
-        const sql = 'SELECT * FROM usuarios WHERE email = ?';
+        const sql = 'SELECT * FROM USUARIOS WHERE email = ?';
         const [rows] = await connection.execute(sql, [email]);
 
         if (rows.length === 0) {
