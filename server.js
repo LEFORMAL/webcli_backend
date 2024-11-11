@@ -443,6 +443,23 @@ app.get('/api/pago_exitoso', async (req, res) => {
     const medioPago = req.query.medioPago || null;
     const costoTotal = req.query.costoTotal || null;
 
+    // Agregar logs para depuración
+    console.log('tipoSolicitud:', tipoSolicitud);
+    console.log('fechaSolicitud:', fechaSolicitud);
+    console.log('descripcion:', descripcion);
+    console.log('direccion:', direccion);
+    console.log('rut:', rut);
+    console.log('nombre:', nombre);
+    console.log('telefono:', telefono);
+    console.log('email:', email);
+    console.log('cantidad:', cantidad);
+    console.log('marca:', marca);
+    console.log('modelo:', modelo);
+    console.log('necesitaCompra:', necesitaCompra);
+    console.log('fechaRealizacion:', fechaRealizacion);
+    console.log('medioPago:', medioPago);
+    console.log('costoTotal:', costoTotal);
+
     try {
         const connection = await connectMySQL();
 
