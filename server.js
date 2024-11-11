@@ -322,6 +322,8 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
+// Ruta para crear una solicitud transferencia
+// Ruta para crear una solicitud transferencia
 app.post('/api/solicitud_transferencia', async (req, res) => {
     const {
         nombre, rut, telefono, email, direccion, cantidad,
@@ -333,30 +335,30 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         const connection = await connectMySQL();
 
         // Verificar si el usuario está registrado
-        const sqlUsuario = 'SELECT * FROM USUARIOS WHERE rut = :rut';
-        const resultUsuario = await connection.execute(sqlUsuario, { rut });
+        const sqlUsuario = 'SELECT * FROM USUARIOS WHERE rut = ?';
+        const [resultUsuario] = await connection.execute(sqlUsuario, [rut]);
 
         console.log(resultUsuario);  // Imprimir para revisar la estructura de resultUsuario
 
         let rutUsuario = rut;
 
-        // Verificar si resultUsuario.rows es un array y tiene datos
-        if (!resultUsuario || !resultUsuario.rows || resultUsuario.rows.length === 0) {
+        // Verificar si resultUsuario tiene datos
+        if (!resultUsuario || resultUsuario.length === 0) {
             // Si no está registrado, insertar un nuevo usuario invitado
             const sqlInsertInvitado = `INSERT INTO INVITADOS (nombre, rut, telefono, email, direccion)
                                        VALUES (?, ?, ?, ?, ?)`;
-        
+
             await connection.execute(sqlInsertInvitado, [
                 nombre,
                 rut,
                 telefono,
                 email,
                 direccion
-            ], { autoCommit: true });
-        
+            ]);
+
             // Usar el RUT del invitado para la solicitud
             rutUsuario = rut;
-        }        
+        }
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO solicitud (
@@ -365,18 +367,18 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
             cantidad_productos, marca_producto, modelo_producto, 
             necesita_compra, fecha_realizacion, medio_pago, costo_total
         ) VALUES (
-            :tipo_solicitud, TO_DATE(:fecha_solicitud, 'YYYY-MM-DD'), :descripcion, :direccion, 
-            :rut_usuario, :nombre, :rut, :telefono, :email, 
-            :cantidad, :marca, :modelo, 
-            :necesitaCompra, TO_DATE(:fecha_realizacion, 'YYYY-MM-DD'), :medio_pago, :costo_total
-        ) RETURNING id_solicitud INTO :id_solicitud`;
+            ?, STR_TO_DATE(?, '%Y-%m-%d'), ?, ?, 
+            ?, ?, ?, ?, ?, 
+            ?, ?, ?, 
+            ?, STR_TO_DATE(?, '%Y-%m-%d'), ?, ?
+        )`;
 
-        const resultSolicitud = await connection.execute(sqlSolicitud, {
-            tipo_solicitud: tipoSolicitud,
-            fecha_solicitud: fechaSolicitud,
+        await connection.execute(sqlSolicitud, [
+            tipoSolicitud,
+            fechaSolicitud,
             descripcion,
             direccion,
-            rut_usuario: rutUsuario,
+            rutUsuario,
             nombre,
             rut,
             telefono,
@@ -384,14 +386,15 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
             cantidad,
             marca,
             modelo,
-            necesitaCompra: necesitaCompra ? 'Y' : 'N',
-            fecha_realizacion: fechaRealizacion,
-            medio_pago: medioPago,
-            costo_total: costoTotal,
-            id_solicitud: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-        }, { autoCommit: true });
+            necesitaCompra ? 'Y' : 'N',
+            fechaRealizacion,
+            medioPago,
+            costoTotal
+        ]);
 
-        const id_solicitud = resultSolicitud.outBinds.id_solicitud[0];
+        // Obtener el id_solicitud generado automáticamente
+        const [resultSolicitud] = await connection.execute('SELECT LAST_INSERT_ID() AS id_solicitud');
+        const id_solicitud = resultSolicitud[0].id_solicitud;
 
         await connection.close();
 
@@ -405,12 +408,13 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        res.status(200).json({ message: 'Solicitud creada con éxito' });
+        res.status(200).json({ message: 'Solicitud creada con éxito', id_solicitud });
     } catch (error) {
         console.error('Error al crear la solicitud:', error);
         res.status(500).json({ error: 'Error al crear la solicitud', details: error.message });
     }
 });
+
 
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
