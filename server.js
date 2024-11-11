@@ -523,6 +523,18 @@ app.get('/obtenerSolicitudes', async (req, res) => {
     }
 });
 
+app.get('/test-db-connection', async (req, res) => {
+    try {
+        const connection = await connectMySQL();
+        await connection.query('SELECT 1'); // Consulta simple para probar la conexión
+        await connection.end();
+        res.status(200).send('Conexión a la base de datos exitosa');
+    } catch (error) {
+        console.error('Error al conectar con la base de datos:', error);
+        res.status(500).send('Error al conectar con la base de datos');
+    }
+});
+
 // Servidor en puerto 3000
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor en ejecución en el puerto ${PORT}`));
@@ -545,3 +557,4 @@ function createMercadoPagoPreference(tipoSolicitud, cantidad, costoTotal) {
         auto_return: "approved",
     };
 }
+
