@@ -229,6 +229,7 @@ app.post('/request-password-reset', async (req, res) => {
 });
 // Ruta para actualizar la contraseña
 // Ruta para actualizar la contraseña
+// Ruta para actualizar la contraseña
 app.post('/nueva_password', async (req, res) => {
     const { token, email, newPassword } = req.body;
 
