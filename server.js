@@ -193,11 +193,11 @@ app.post('/request-password-reset', async (req, res) => {
 
     try {
         const connection = await connectMySQL();
-        const sql = 'SELECT * FROM usuarios WHERE email = :email';
-        const result = await connection.execute(sql, [email]);
+        const sql = 'SELECT * FROM USUARIOS WHERE email = ?';
+        const [rows] = await connection.execute(sql, [email]);
 
-        if (result.rows.length === 0) {
-            await connection.close();
+        if (rows.length === 0) {
+            await connection.end();
             return res.status(404).send('Usuario no encontrado');
         }
 
@@ -207,13 +207,12 @@ app.post('/request-password-reset', async (req, res) => {
 
         // Guardar token en la base de datos
         await connection.execute(
-            `UPDATE usuarios SET reset_token = :token, reset_token_expiration = :expiration WHERE email = :email`,
-            { token, expiration, email },
-            { autoCommit: true }
+            `UPDATE USUARIOS SET reset_token = ?, reset_token_expiration = ? WHERE email = ?`,
+            [token, expiration, email]
         );
 
         // Enviar el enlace de restablecimiento por correo
-        const resetLink = `http://localhost:3000/nueva_password?token=${token}&email=${email}`;
+        const resetLink = `https://miapp.github.io/nueva_password?token=${token}&email=${email}`;
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
