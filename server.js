@@ -267,13 +267,20 @@ app.post('/nueva_password', async (req, res) => {
         }
 
         // Verifica la expiración del token
-        const expirationDate = new Date(rows[0].reset_token_expiration).toISOString();
-        const currentDate = new Date().toISOString(); // Convertimos ambas fechas a UTC
-        console.log('Fecha de expiración del token en BD (UTC):', expirationDate);
-        console.log('Fecha actual en el servidor (UTC):', currentDate);
+        const expirationDate = rows[0].reset_token_expiration;
+        if (!expirationDate || isNaN(new Date(expirationDate))) {
+            console.log('Token expirado o fecha de expiración inválida');
+            await connection.end();
+            return res.status(400).send('Token expirado');
+        }
+
+        const expirationDateUTC = new Date(expirationDate).toISOString();
+        const currentDateUTC = new Date().toISOString(); // Convertimos ambas fechas a UTC
+        console.log('Fecha de expiración del token en BD (UTC):', expirationDateUTC);
+        console.log('Fecha actual en el servidor (UTC):', currentDateUTC);
 
         // Compara ambas fechas en formato UTC
-        if (currentDate > expirationDate) {
+        if (currentDateUTC > expirationDateUTC) {
             console.log('Token expirado');
             await connection.end();
             return res.status(400).send('Token expirado');
@@ -294,6 +301,7 @@ app.post('/nueva_password', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 
 // Ruta para obtener las marcas y modelos desde la base de datos
 app.get('/api/productos', async (req, res) => {
