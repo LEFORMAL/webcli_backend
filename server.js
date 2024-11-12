@@ -443,7 +443,7 @@ app.get('/api/pago_fallido', (req, res) => {
 app.get('/api/pago_pendiente', (req, res) => {
     res.redirect('/pago_pendiente.html');
 });
-// Ruta para pagos con transferencia
+// Ruta para crear una solicitud y manejar el pago por transferencia
 app.post('/api/solicitud_transferencia', async (req, res) => {
     const datosSolicitud = req.body;
     const solicitudId = crypto.randomBytes(16).toString("hex"); // Generar un ID único para la solicitud
@@ -465,24 +465,24 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         )`;
 
         const [resultSolicitud] = await connection.execute(sqlSolicitud, [
-            datosSolicitud.tipoSolicitud,
+            datosSolicitud.tipoSolicitud || null,
             new Date().toISOString().split('T')[0], // FECHA_SOLICITUD como la fecha actual
-            datosSolicitud.descripcion,
-            datosSolicitud.direccion,
-            datosSolicitud.comuna,
-            datosSolicitud.region,
-            datosSolicitud.rut,
-            datosSolicitud.nombre,
-            datosSolicitud.rut, // Usamos el mismo RUT para RUT_NIT en este caso
-            datosSolicitud.telefono,
-            datosSolicitud.email,
-            datosSolicitud.cantidad,
-            datosSolicitud.marca,
-            datosSolicitud.modelo,
-            datosSolicitud.necesitaCompra,
-            datosSolicitud.fechaRealizacion,
-            'transferencia', // Especificamos que el medio de pago es transferencia
-            datosSolicitud.costoTotal
+            datosSolicitud.descripcion || null,
+            datosSolicitud.direccion || null,
+            datosSolicitud.comuna || null,
+            datosSolicitud.region || null,
+            datosSolicitud.rut || null,
+            datosSolicitud.nombre || null,
+            datosSolicitud.rut || null, // Usamos el mismo RUT para RUT_NIT en este caso
+            datosSolicitud.telefono || null,
+            datosSolicitud.email || null,
+            datosSolicitud.cantidad || 1, // Por defecto, cantidad 1 si no está especificada
+            datosSolicitud.marca || null,
+            datosSolicitud.modelo || null,
+            datosSolicitud.necesitaCompra || 'N', // Por defecto, no necesita compra
+            datosSolicitud.fechaRealizacion || null,
+            'transferencia', // Medio de pago es transferencia
+            datosSolicitud.costoTotal || 0 // Por defecto, costo total es 0 si no está especificado
         ]);
 
         const id_solicitud = resultSolicitud.insertId;
@@ -495,7 +495,7 @@ app.post('/api/solicitud_transferencia', async (req, res) => {
         )`;
 
         await connection.execute(sqlPago, [
-            datosSolicitud.costoTotal,
+            datosSolicitud.costoTotal || 0, // De nuevo, asegurar que sea 0 si no está definido
             id_solicitud
         ]);
 
@@ -534,7 +534,6 @@ Equipo de Servicios de Climatización`
         res.status(500).json({ error: 'Error al procesar la solicitud de transferencia', details: error.message });
     }
 });
-
 
 // Ruta para actualizar perfil de usuario
 app.post('/actualizarPerfil', async (req, res) => {
