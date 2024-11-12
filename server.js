@@ -527,13 +527,14 @@ Equipo de Servicios de Climatización`
         // Enviar el correo usando Nodemailer
         await transporter.sendMail(mailOptions);
 
-        // Responder al cliente confirmando la solicitud y el envío del correo
-        res.status(200).json({ message: 'Solicitud creada con éxito. Se ha enviado un correo con los detalles para la transferencia.' });
+        // Redirigir a la página de confirmación
+        res.redirect('/pagar_transferencia.html');
     } catch (error) {
         console.error('Error al crear la solicitud por transferencia:', error);
         res.status(500).json({ error: 'Error al procesar la solicitud de transferencia', details: error.message });
     }
 });
+
 
 // Ruta para actualizar perfil de usuario
 app.post('/actualizarPerfil', async (req, res) => {
