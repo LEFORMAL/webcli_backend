@@ -207,7 +207,6 @@ app.post('/login', async (req, res) => {
 });
 
 // Ruta para solicitar restablecimiento de contraseña
-// Ruta para solicitar restablecimiento de contraseña
 app.post('/request-password-reset', async (req, res) => {
     const { email } = req.body;
 
@@ -223,15 +222,17 @@ app.post('/request-password-reset', async (req, res) => {
 
         // Generar token de restablecimiento y la fecha de expiración en UTC
         const token = crypto.randomBytes(20).toString('hex');
-        const expiration = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
+        let expiration = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
 
+        // Convertir fecha a formato compatible con MySQL: 'YYYY-MM-DD HH:MM:SS'
+        expiration = expiration.toISOString().slice(0, 19).replace('T', ' ');
         console.log('Generando token:', token);
-        console.log('Fecha de expiración del token (UTC):', expiration.toISOString());
+        console.log('Fecha de expiración del token (MySQL formato):', expiration);
 
-        // Guardar el token y la fecha de expiración en UTC en la base de datos
+        // Guardar el token y la fecha de expiración en la base de datos
         await connection.execute(
             `UPDATE USUARIOS SET reset_token = ?, reset_token_expiration = ? WHERE email = ?`,
-            [token, expiration.toISOString(), email]
+            [token, expiration, email]
         );
 
         await connection.end();
