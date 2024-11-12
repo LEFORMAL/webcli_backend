@@ -262,8 +262,8 @@ app.post('/nueva_password', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
-        // Primero, verifica que el token y el email coinciden
-        const sql = 'SELECT * FROM USUARIOS WHERE email = ? AND reset_token = ?';
+        // Verificar que el token y el email coinciden
+        const sql = 'SELECT * FROM USUARIOS WHERE EMAIL = ? AND RESET_TOKEN = ?';
         const [rows] = await connection.execute(sql, [email, token]);
 
         if (rows.length === 0) {
@@ -272,15 +272,16 @@ app.post('/nueva_password', async (req, res) => {
             return res.status(400).send('Token inválido o expirado');
         }
 
-        // Extrae y verifica la fecha de expiración del token
-        const expirationDate = rows[0].reset_token_expiration;
+        // Extraer y verificar la fecha de expiración del token
+        const expirationDate = rows[0].RESET_TOKEN_EXPIRATION;
+        console.log('Fecha de expiración del token en la base de datos:', expirationDate);
+
         if (!expirationDate) {
             console.log('Fecha de expiración del token es nula o inválida');
             await connection.end();
             return res.status(400).send('Token inválido o expirado');
         }
 
-        // Convierte `expirationDate` en un objeto `Date` y verifica si es válido
         const expirationDateObj = new Date(expirationDate);
         if (isNaN(expirationDateObj.getTime())) {
             console.log('Fecha de expiración no es válida:', expirationDate);
@@ -289,21 +290,20 @@ app.post('/nueva_password', async (req, res) => {
         }
 
         const currentDate = new Date();
-        console.log('Fecha de expiración del token en BD (UTC):', expirationDateObj.toISOString());
+        console.log('Fecha de expiración del token (UTC):', expirationDateObj.toISOString());
         console.log('Fecha actual en el servidor (UTC):', currentDate.toISOString());
 
-        // Compara ambas fechas en formato UTC
         if (currentDate > expirationDateObj) {
             console.log('Token expirado');
             await connection.end();
             return res.status(400).send('Token expirado');
         }
 
-        // Si el token es válido y no expiró, actualiza la contraseña
+        // Si el token es válido y no expiró, actualizar la contraseña
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await connection.execute(
-            'UPDATE USUARIOS SET contrasena = ?, reset_token = NULL, reset_token_expiration = NULL WHERE email = ?',
+            'UPDATE USUARIOS SET CONTRASENA = ?, RESET_TOKEN = NULL, RESET_TOKEN_EXPIRATION = NULL WHERE EMAIL = ?',
             [hashedPassword, email]
         );
 
@@ -314,6 +314,7 @@ app.post('/nueva_password', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 
 
 
