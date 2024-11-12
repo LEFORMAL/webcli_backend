@@ -22,7 +22,7 @@ app.use(cors());
 // Configurar el servidor para recibir datos en formato JSON
 app.use(express.json());
 
-// Configurar conexión a Oracle Database
+// Configurar conexión a mysql Database
 async function connectMySQL() {
     try {
         const connection = await mysql.createConnection({
@@ -304,85 +304,66 @@ app.get('/api/productos', async (req, res) => {
 });
 
 // Ruta para crear una solicitud
+// Ruta para crear una solicitud
 app.post('/api/solicitud', async (req, res) => {
-    const {
-        nombre, rut, telefono, email, direccion, cantidad,
-        marca, modelo, necesitaCompra, tipoSolicitud,
-        fechaSolicitud, fechaRealizacion, descripcion, medioPago, costoTotal
-    } = req.body;
+    const solicitudId = crypto.randomBytes(16).toString("hex"); // Generar un ID único para la solicitud
+    const datosSolicitud = req.body;
 
     try {
-        // Generar la preferencia de pago en Mercado Pago
+        const connection = await connectMySQL();
+
+        // Guardar los datos en la tabla temporal
+        const sqlTemp = `INSERT INTO solicitudes_temporales (solicitud_id, datos) VALUES (?, ?)`;
+        await connection.execute(sqlTemp, [solicitudId, JSON.stringify(datosSolicitud)]);
+        
+        await connection.end();
+
+        // Configurar preferencia de pago en Mercado Pago
         const preference = {
             items: [
                 {
-                    title: tipoSolicitud,
-                    quantity: cantidad,
+                    title: datosSolicitud.tipoSolicitud,
+                    quantity: datosSolicitud.cantidad,
                     currency_id: 'CLP',
-                    unit_price: parseFloat(costoTotal),
+                    unit_price: parseFloat(datosSolicitud.costoTotal),
                 },
             ],
             back_urls: {
-                success: "https://webclibackend-production.up.railway.app/api/pago_exitoso",
+                success: `https://webclibackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}`,
                 failure: "https://webclibackend-production.up.railway.app/api/pago_fallido",
                 pending: "https://webclibackend-production.up.railway.app/api/pago_pendiente",
             },
             auto_return: "approved",
+            external_reference: solicitudId // Referencia para recuperar la solicitud en el pago
         };
 
-        // Crear preferencia en Mercado Pago
         const response = await mercadopago.preferences.create(preference);
         const init_point = response.body.init_point;
 
-        // Enviar el enlace de pago si todo fue exitoso
         res.status(200).json({ message: 'Preferencia de pago creada con éxito', init_point });
     } catch (error) {
-        console.error('Error al crear la preferencia de pago:', error);
+        console.error('Error al guardar la solicitud temporal:', error);
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
-    const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
-
-    console.log('Datos recibidos de Mercado Pago:', req.query); // Depuración
-
-    // Asegurarse de que todos los parámetros tengan valores válidos
-    const tipoSolicitud = req.query.tipoSolicitud || null;
-    const fechaSolicitud = req.query.fechaSolicitud || null;
-    const descripcion = req.query.descripcion || null;
-    const direccion = req.query.direccion || null;
-    const rut = req.query.rut || null;
-    const nombre = req.query.nombre || null;
-    const telefono = req.query.telefono || null;
-    const email = req.query.email || null;
-    const cantidad = req.query.cantidad || null;
-    const marca = req.query.marca || null;
-    const modelo = req.query.modelo || null;
-    const necesitaCompra = req.query.necesitaCompra ? 'Y' : 'N';
-    const fechaRealizacion = req.query.fechaRealizacion || null;
-    const medioPago = req.query.medioPago || null;
-    const costoTotal = req.query.costoTotal || null;
-
-    // Agregar logs para depuración
-    console.log('tipoSolicitud:', tipoSolicitud);
-    console.log('fechaSolicitud:', fechaSolicitud);
-    console.log('descripcion:', descripcion);
-    console.log('direccion:', direccion);
-    console.log('rut:', rut);
-    console.log('nombre:', nombre);
-    console.log('telefono:', telefono);
-    console.log('email:', email);
-    console.log('cantidad:', cantidad);
-    console.log('marca:', marca);
-    console.log('modelo:', modelo);
-    console.log('necesitaCompra:', necesitaCompra);
-    console.log('fechaRealizacion:', fechaRealizacion);
-    console.log('medioPago:', medioPago);
-    console.log('costoTotal:', costoTotal);
+    const solicitudId = req.query.solicitudId;
 
     try {
         const connection = await connectMySQL();
+
+        // Recuperar los datos de solicitud desde la tabla temporal
+        const [rows] = await connection.execute(
+            `SELECT datos FROM solicitudes_temporales WHERE solicitud_id = ? AND estado = 'pendiente'`,
+            [solicitudId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Datos de solicitud no encontrados o ya procesados' });
+        }
+
+        const datosSolicitud = JSON.parse(rows[0].datos); // Parsear el JSON
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO SOLICITUD (
@@ -398,22 +379,22 @@ app.get('/api/pago_exitoso', async (req, res) => {
         )`;
 
         const [resultSolicitud] = await connection.execute(sqlSolicitud, [
-            tipoSolicitud,
-            fechaSolicitud,
-            descripcion,
-            direccion,
-            rut,
-            nombre,
-            rut,
-            telefono,
-            email,
-            cantidad,
-            marca,
-            modelo,
-            necesitaCompra,
-            fechaRealizacion,
-            medioPago,
-            costoTotal
+            datosSolicitud.tipoSolicitud,
+            datosSolicitud.fechaSolicitud,
+            datosSolicitud.descripcion,
+            datosSolicitud.direccion,
+            datosSolicitud.rut,
+            datosSolicitud.nombre,
+            datosSolicitud.rut,
+            datosSolicitud.telefono,
+            datosSolicitud.email,
+            datosSolicitud.cantidad,
+            datosSolicitud.marca,
+            datosSolicitud.modelo,
+            datosSolicitud.necesitaCompra,
+            datosSolicitud.fechaRealizacion,
+            datosSolicitud.medioPago,
+            datosSolicitud.costoTotal
         ]);
 
         const id_solicitud = resultSolicitud.insertId;
@@ -425,11 +406,17 @@ app.get('/api/pago_exitoso', async (req, res) => {
             ?, ?, NOW(), ?
         )`;
 
-        const [resultPago] = await connection.execute(sqlPago, [
-            costoTotal,
-            medioPago,
+        await connection.execute(sqlPago, [
+            datosSolicitud.costoTotal,
+            datosSolicitud.medioPago,
             id_solicitud
         ]);
+
+        // Actualizar el estado en la tabla temporal
+        await connection.execute(
+            `UPDATE solicitudes_temporales SET estado = 'completada' WHERE solicitud_id = ?`,
+            [solicitudId]
+        );
 
         await connection.end();
 
@@ -440,6 +427,7 @@ app.get('/api/pago_exitoso', async (req, res) => {
         res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
     }
 });
+
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const { collection_id, collection_status, external_reference, payment_type, merchant_order_id } = req.query;
