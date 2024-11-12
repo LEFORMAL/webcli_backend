@@ -222,7 +222,8 @@ app.post('/request-password-reset', async (req, res) => {
 
         // Generar token de restablecimiento
         const token = crypto.randomBytes(20).toString('hex');
-        const expiration = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
+        const expiration = new Date(Date.now() + 15 * 60 * 1000);
+        console.log("Generated expiration time (UTC):", expiration.toISOString()); // Expira en 15 minutos
 
         console.log('Generando token:', token);
         console.log('Fecha de expiración del token:', expiration);
@@ -230,7 +231,7 @@ app.post('/request-password-reset', async (req, res) => {
         // Guardar token en la base de datos
         await connection.execute(
             `UPDATE USUARIOS SET reset_token = ?, reset_token_expiration = ? WHERE email = ?`,
-            [token, expiration, email]
+            [token, expiration.toISOString(), email] // Ensure UTC format
         );
 
         await connection.end();
