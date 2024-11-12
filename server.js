@@ -470,6 +470,7 @@ app.get('/api/pago_exitoso', async (req, res) => {
         console.log("Solicitud guardada exitosamente con ID:", id_solicitud);
 
         // Insertar el pago en la tabla PAGOS
+        console.log("Preparando para insertar en PAGOS...");
         const sqlPago = `INSERT INTO PAGOS (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
