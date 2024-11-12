@@ -207,6 +207,7 @@ app.post('/login', async (req, res) => {
 });
 
 // Ruta para solicitar restablecimiento de contraseña
+// Ruta para solicitar restablecimiento de contraseña
 app.post('/request-password-reset', async (req, res) => {
     const { email } = req.body;
 
@@ -220,18 +221,17 @@ app.post('/request-password-reset', async (req, res) => {
             return res.status(404).send('Usuario no encontrado');
         }
 
-        // Generar token de restablecimiento
+        // Generar token de restablecimiento y la fecha de expiración en UTC
         const token = crypto.randomBytes(20).toString('hex');
-        const expiration = new Date(Date.now() + 15 * 60 * 1000);
-        console.log("Generated expiration time (UTC):", expiration.toISOString()); // Expira en 15 minutos
+        const expiration = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
 
         console.log('Generando token:', token);
-        console.log('Fecha de expiración del token:', expiration);
+        console.log('Fecha de expiración del token (UTC):', expiration.toISOString());
 
-        // Guardar token en la base de datos
+        // Guardar el token y la fecha de expiración en UTC en la base de datos
         await connection.execute(
             `UPDATE USUARIOS SET reset_token = ?, reset_token_expiration = ? WHERE email = ?`,
-            [token, expiration.toISOString(), email] // Ensure UTC format
+            [token, expiration.toISOString(), email]
         );
 
         await connection.end();
@@ -252,6 +252,7 @@ app.post('/request-password-reset', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 // Ruta para asignar nueva contraseña
 app.post('/nueva_password', async (req, res) => {
     const { token, email, newPassword } = req.body;
@@ -263,8 +264,8 @@ app.post('/nueva_password', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
-        // Verificar que el token y el email coinciden
-        const sql = 'SELECT * FROM USUARIOS WHERE EMAIL = ? AND RESET_TOKEN = ?';
+        // Verificar que el token y el email coinciden en la base de datos
+        const sql = 'SELECT reset_token_expiration FROM USUARIOS WHERE email = ? AND reset_token = ?';
         const [rows] = await connection.execute(sql, [email, token]);
 
         if (rows.length === 0) {
@@ -274,8 +275,7 @@ app.post('/nueva_password', async (req, res) => {
         }
 
         // Extraer y verificar la fecha de expiración del token
-        const expirationDate = rows[0].RESET_TOKEN_EXPIRATION;
-        console.log('Fecha de expiración del token en la base de datos:', expirationDate);
+        const expirationDate = rows[0].reset_token_expiration;
 
         if (!expirationDate) {
             console.log('Fecha de expiración del token es nula o inválida');
@@ -284,14 +284,9 @@ app.post('/nueva_password', async (req, res) => {
         }
 
         const expirationDateObj = new Date(expirationDate);
-        if (isNaN(expirationDateObj.getTime())) {
-            console.log('Fecha de expiración no es válida:', expirationDate);
-            await connection.end();
-            return res.status(400).send('Token inválido o expirado');
-        }
-
         const currentDate = new Date();
-        console.log('Fecha de expiración del token (UTC):', expirationDateObj.toISOString());
+
+        console.log('Fecha de expiración del token en la base de datos (UTC):', expirationDateObj.toISOString());
         console.log('Fecha actual en el servidor (UTC):', currentDate.toISOString());
 
         if (currentDate > expirationDateObj) {
@@ -300,23 +295,21 @@ app.post('/nueva_password', async (req, res) => {
             return res.status(400).send('Token expirado');
         }
 
-        // Si el token es válido y no expiró, actualizar la contraseña
+        // Si el token es válido y no ha expirado, actualizar la contraseña
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await connection.execute(
-            'UPDATE USUARIOS SET CONTRASENA = ?, RESET_TOKEN = NULL, RESET_TOKEN_EXPIRATION = NULL WHERE EMAIL = ?',
+            'UPDATE USUARIOS SET contrasena = ?, reset_token = NULL, reset_token_expiration = NULL WHERE email = ?',
             [hashedPassword, email]
         );
 
-        res.status(200).send('Contraseña actualizada con éxito');
         await connection.end();
+        res.status(200).send('Contraseña actualizada con éxito');
     } catch (error) {
         console.error('Error al actualizar la contraseña:', error);
         res.status(500).send('Error en el servidor');
     }
 });
-
-
 
 
 
