@@ -572,8 +572,6 @@ Equipo de Servicios de Climatización`
         res.status(500).json({ error: 'Error al procesar la solicitud de transferencia', details: error.message });
     }
 });
-
-
 // Ruta para actualizar perfil de usuario
 app.post('/actualizarPerfil', async (req, res) => {
     const { email, nombres, apellidos, telefono, direccion, fecha_nacimiento } = req.body;
@@ -585,30 +583,31 @@ app.post('/actualizarPerfil', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
+        // Usar placeholders compatibles con MySQL
         const sql = `UPDATE USUARIOS
-                     SET nombres = :nombres,
-                         apellidos = :apellidos,
-                         telefono = :telefono,
-                         direccion = :direccion,
-                         fecha_nacimiento = TO_DATE(:fecha_nacimiento, 'YYYY-MM-DD')
-                     WHERE email = :email`;
+                     SET NOMBRES = ?, 
+                         APELLIDOS = ?, 
+                         TELEFONO = ?, 
+                         DIRECCION = ?, 
+                         FECHA_NACIMIENTO = ?
+                     WHERE EMAIL = ?`;
 
-        await connection.execute(sql, {
+        await connection.execute(sql, [
             nombres,
             apellidos,
             telefono,
             direccion,
-            fecha_nacimiento,
-            email,
-        }, { autoCommit: true });
+            fecha_nacimiento,  // Pasar directamente si está en formato 'YYYY-MM-DD'
+            email
+        ]);
 
         // Recuperar los datos actualizados
-        const updatedUserResult = await connection.execute(
-            'SELECT * FROM usuarios WHERE email = :email', [email]
+        const [updatedUserResult] = await connection.execute(
+            'SELECT * FROM USUARIOS WHERE EMAIL = ?', [email]
         );
 
-        const updatedUser = updatedUserResult.rows[0];
-        await connection.close();
+        const updatedUser = updatedUserResult[0];
+        await connection.end();
 
         // Enviar los datos actualizados al frontend
         res.status(200).json({
@@ -627,6 +626,7 @@ app.post('/actualizarPerfil', async (req, res) => {
         res.status(500).json({ message: 'Error al actualizar el perfil' });
     }
 });
+
 // Ruta para obtener las solicitudes del usuario
 app.get('/obtenerSolicitudes', async (req, res) => {
     const token = req.headers['authorization'];
