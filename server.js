@@ -363,7 +363,13 @@ app.get('/api/pago_exitoso', async (req, res) => {
             return res.status(404).json({ error: 'Datos de solicitud no encontrados o ya procesados' });
         }
 
-        const datosSolicitud = JSON.parse(rows[0].datos); // Parsear el JSON
+        // Verificar si datos ya está en formato JSON
+        let datosSolicitud = rows[0].datos;
+        console.log("Contenido de datos antes de parsear:", datosSolicitud); // Depuración
+
+        if (typeof datosSolicitud === 'string') {
+            datosSolicitud = JSON.parse(datosSolicitud); // Solo parseamos si es una cadena
+        }
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO SOLICITUD (
