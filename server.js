@@ -443,6 +443,98 @@ app.get('/api/pago_fallido', (req, res) => {
 app.get('/api/pago_pendiente', (req, res) => {
     res.redirect('/pago_pendiente.html');
 });
+// Ruta para pagos con transferencia
+app.post('/api/solicitud_transferencia', async (req, res) => {
+    const datosSolicitud = req.body;
+    const solicitudId = crypto.randomBytes(16).toString("hex"); // Generar un ID único para la solicitud
+
+    try {
+        const connection = await connectMySQL();
+
+        // Insertar la solicitud en la tabla SOLICITUD
+        const sqlSolicitud = `INSERT INTO SOLICITUD (
+            TIPO_SOLICITUD, FECHA_SOLICITUD, DESCRIPCION, DIRECCION, 
+            COMUNA, REGION, RUT_USUARIO, NOMBRE, RUT_NIT, 
+            TELEFONO, EMAIL, CANTIDAD_PRODUCTOS, MARCA_PRODUCTO, MODELO_PRODUCTO, 
+            NECESITA_COMPRA, FECHA_REALIZACION, MEDIO_PAGO, COSTO_TOTAL
+        ) VALUES (
+            ?, ?, ?, ?, 
+            ?, ?, ?, ?, ?, 
+            ?, ?, ?, ?, ?, 
+            ?, ?, ?, ?
+        )`;
+
+        const [resultSolicitud] = await connection.execute(sqlSolicitud, [
+            datosSolicitud.tipoSolicitud,
+            new Date().toISOString().split('T')[0], // FECHA_SOLICITUD como la fecha actual
+            datosSolicitud.descripcion,
+            datosSolicitud.direccion,
+            datosSolicitud.comuna,
+            datosSolicitud.region,
+            datosSolicitud.rut,
+            datosSolicitud.nombre,
+            datosSolicitud.rut, // Usamos el mismo RUT para RUT_NIT en este caso
+            datosSolicitud.telefono,
+            datosSolicitud.email,
+            datosSolicitud.cantidad,
+            datosSolicitud.marca,
+            datosSolicitud.modelo,
+            datosSolicitud.necesitaCompra,
+            datosSolicitud.fechaRealizacion,
+            'transferencia', // Especificamos que el medio de pago es transferencia
+            datosSolicitud.costoTotal
+        ]);
+
+        const id_solicitud = resultSolicitud.insertId;
+
+        // Insertar la transacción en la tabla PAGOS con el medio de pago "transferencia"
+        const sqlPago = `INSERT INTO PAGOS (
+            TOTAL, MEDIO_PAGO, FECHA_TRANSACCION, ID_SOLICITUD
+        ) VALUES (
+            ?, 'transferencia', NOW(), ?
+        )`;
+
+        await connection.execute(sqlPago, [
+            datosSolicitud.costoTotal,
+            id_solicitud
+        ]);
+
+        await connection.end();
+
+        // Enviar correo electrónico al usuario con los detalles para realizar la transferencia
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: datosSolicitud.email,
+            subject: 'Detalles para realizar la transferencia bancaria',
+            text: `Estimado/a ${datosSolicitud.nombre},
+
+Gracias por su solicitud de servicio de ${datosSolicitud.tipoSolicitud}. Para completar su solicitud, por favor realice una transferencia bancaria con los siguientes detalles:
+
+- Monto a Transferir: CLP ${datosSolicitud.costoTotal.toFixed(2)}
+- Banco: Banco Ejemplo
+- Número de Cuenta: 123456789
+- Tipo de Cuenta: Cuenta Corriente
+- Nombre del Beneficiario: Nombre Ejemplo
+- RUT del Beneficiario: 12.345.678-9
+- Asunto: ${solicitudId} (Por favor incluya este código en el asunto de la transferencia)
+
+Una vez realizada la transferencia, por favor responda a este correo con el comprobante de pago. Nos pondremos en contacto para confirmar la recepción y proceder con la solicitud.
+
+Saludos cordiales,
+Equipo de Servicios de Climatización`
+        };
+
+        // Enviar el correo usando Nodemailer
+        await transporter.sendMail(mailOptions);
+
+        // Responder al cliente confirmando la solicitud y el envío del correo
+        res.status(200).json({ message: 'Solicitud creada con éxito. Se ha enviado un correo con los detalles para la transferencia.' });
+    } catch (error) {
+        console.error('Error al crear la solicitud por transferencia:', error);
+        res.status(500).json({ error: 'Error al procesar la solicitud de transferencia', details: error.message });
+    }
+});
+
 
 // Ruta para actualizar perfil de usuario
 app.post('/actualizarPerfil', async (req, res) => {
