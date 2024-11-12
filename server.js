@@ -361,16 +361,17 @@ app.post('/api/solicitud', async (req, res) => {
 
         // Determinar URLs de redirección según el dispositivo
         const successUrl = datosSolicitud.isMobile 
-            ? `https://webclimabackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}&isMobile=true` 
-            : `https://webclimabackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}&isMobile=false`;
+    ? `https://leformal.github.io/webcli_frontend/mobile/pago_exitoso.html?solicitudId=${solicitudId}&isMobile=true` 
+    : `https://leformal.github.io/webcli_frontend/pago_exitoso.html?solicitudId=${solicitudId}&isMobile=false`;
 
-        const failureUrl = datosSolicitud.isMobile 
-            ? "https://webclimabackend-production.up.railway.app/api/pago_fallido?isMobile=true" 
-            : "https://webclimabackend-production.up.railway.app/api/pago_fallido?isMobile=false";
+const failureUrl = datosSolicitud.isMobile 
+    ? "https://leformal.github.io/webcli_frontend/mobile/pago_fallido.html" 
+    : "https://leformal.github.io/webcli_frontend/pago_fallido.html";
 
-        const pendingUrl = datosSolicitud.isMobile 
-            ? "https://webclimabackend-production.up.railway.app/api/pago_pendiente?isMobile=true" 
-            : "https://webclimabackend-production.up.railway.app/api/pago_pendiente?isMobile=false";
+const pendingUrl = datosSolicitud.isMobile 
+    ? "https://leformal.github.io/webcli_frontend/mobile/pago_pendiente.html" 
+    : "https://leformal.github.io/webcli_frontend/pago_pendiente.html";
+
 
         // Configurar preferencia de pago en Mercado Pago
         const preference = {
