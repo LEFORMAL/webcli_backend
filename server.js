@@ -251,7 +251,7 @@ app.post('/request-password-reset', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
-
+// Ruta para asignar nueva contraseña
 app.post('/nueva_password', async (req, res) => {
     const { token, email, newPassword } = req.body;
 
@@ -273,20 +273,14 @@ app.post('/nueva_password', async (req, res) => {
         }
 
         // Verifica la expiración del token
-        const expirationDate = rows[0].reset_token_expiration;
-        if (!expirationDate || isNaN(new Date(expirationDate))) {
-            console.log('Token expirado o fecha de expiración inválida');
-            await connection.end();
-            return res.status(400).send('Token expirado');
-        }
+        const expirationDate = new Date(rows[0].reset_token_expiration);
+        const currentDate = new Date();
 
-        const expirationDateUTC = new Date(expirationDate).toISOString();
-        const currentDateUTC = new Date().toISOString(); // Convertimos ambas fechas a UTC
-        console.log('Fecha de expiración del token en BD (UTC):', expirationDateUTC);
-        console.log('Fecha actual en el servidor (UTC):', currentDateUTC);
+        console.log('Fecha de expiración del token en BD (UTC):', expirationDate.toISOString());
+        console.log('Fecha actual en el servidor (UTC):', currentDate.toISOString());
 
         // Compara ambas fechas en formato UTC
-        if (currentDateUTC > expirationDateUTC) {
+        if (currentDate > expirationDate) {
             console.log('Token expirado');
             await connection.end();
             return res.status(400).send('Token expirado');
@@ -307,6 +301,7 @@ app.post('/nueva_password', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 
 
 // Ruta para obtener las marcas y modelos desde la base de datos
