@@ -359,13 +359,6 @@ app.post('/api/solicitud', async (req, res) => {
         
         await connection.end();
 
-        // Determinar URLs de redirección según el dispositivo
-        const successUrl = `https://webclimabackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}&isMobile=${datosSolicitud.isMobile}`;
-        const failureUrl = `https://webclimabackend-production.up.railway.app/api/pago_fallido?isMobile=${datosSolicitud.isMobile}`;
-        const pendingUrl = `https://webclimabackend-production.up.railway.app/api/pago_pendiente?isMobile=${datosSolicitud.isMobile}`;
-
-
-
         // Configurar preferencia de pago en Mercado Pago
         const preference = {
             items: [
@@ -377,9 +370,9 @@ app.post('/api/solicitud', async (req, res) => {
                 },
             ],
             back_urls: {
-                success: successUrl,
-                failure: failureUrl,
-                pending: pendingUrl,
+                success: `https://webclibackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}`,
+                failure: "https://webclibackend-production.up.railway.app/api/pago_fallido",
+                pending: "https://webclibackend-production.up.railway.app/api/pago_pendiente",
             },
             auto_return: "approved",
             external_reference: solicitudId // Referencia para recuperar la solicitud en el pago
@@ -394,19 +387,12 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
-
-
-// Ruta para manejar el éxito del pago
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const solicitudId = req.query.solicitudId;
-    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
-
-    console.log("Solicitud exitosa recibida para solicitudId:", solicitudId);
 
     try {
         const connection = await connectMySQL();
-        console.log("Conexión a la base de datos establecida para solicitud exitosa.");
 
         // Recuperar los datos de solicitud desde la tabla temporal
         const [rows] = await connection.execute(
@@ -415,17 +401,16 @@ app.get('/api/pago_exitoso', async (req, res) => {
         );
 
         if (rows.length === 0) {
-            console.error('Datos de solicitud no encontrados o ya procesados para solicitudId:', solicitudId);
             return res.status(404).json({ error: 'Datos de solicitud no encontrados o ya procesados' });
         }
 
+        // Verificar si datos ya está en formato JSON
         let datosSolicitud = rows[0].datos;
-        console.log("Datos de solicitud antes de parsear:", datosSolicitud);
+        console.log("Contenido de datos antes de parsear:", datosSolicitud); // Depuración
 
         if (typeof datosSolicitud === 'string') {
             datosSolicitud = JSON.parse(datosSolicitud); // Solo parseamos si es una cadena
         }
-        console.log("Datos de solicitud después de parsear:", datosSolicitud);
 
         // Insertar la solicitud en la tabla SOLICITUD
         const sqlSolicitud = `INSERT INTO SOLICITUD (
@@ -460,10 +445,8 @@ app.get('/api/pago_exitoso', async (req, res) => {
         ]);
 
         const id_solicitud = resultSolicitud.insertId;
-        console.log("Solicitud guardada exitosamente con ID:", id_solicitud);
 
         // Insertar el pago en la tabla PAGOS
-        console.log("Preparando para insertar en PAGOS...");
         const sqlPago = `INSERT INTO PAGOS (
             total, medio_pago, fecha_transaccion, id_solicitud
         ) VALUES (
@@ -475,49 +458,31 @@ app.get('/api/pago_exitoso', async (req, res) => {
             datosSolicitud.medioPago,
             id_solicitud
         ]);
-        console.log("Pago guardado exitosamente para la solicitud ID:", id_solicitud);
 
         // Actualizar el estado en la tabla temporal
-        const [updateResult] = await connection.execute(
+        await connection.execute(
             `UPDATE solicitudes_temporales SET estado = 'completada' WHERE solicitud_id = ?`,
             [solicitudId]
         );
-        console.log("Resultado de actualización:", updateResult);
-
-        // Verificar si la actualización fue exitosa
-        if (updateResult.affectedRows === 0) {
-            console.warn("No se pudo actualizar el estado de la solicitud temporal para solicitudId:", solicitudId);
-            return res.status(500).json({ error: 'No se pudo actualizar el estado de la solicitud temporal' });
-        }
 
         await connection.end();
 
-        // Redirigir a la página de éxito en función del dispositivo
-        const successPage = isMobile 
-            ? 'https://leformal.github.io/webcli_frontend/mobile/pago_exitoso.html' 
-            : 'https://leformal.github.io/webcli_frontend/pago_exitoso.html';
-        res.redirect(successPage);
-
-
+        // Redirigir a la página de éxito
+        res.redirect('/pago_exitoso.html');
     } catch (error) {
         console.error('Error al guardar la solicitud y el pago:', error);
         res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
     }
 });
 
-
 // Ruta para manejar el fallo del pago
 app.get('/api/pago_fallido', (req, res) => {
-    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
-    const failurePage = isMobile ? '/mobile/pago_fallido.html' : '/pago_fallido.html';
-    res.redirect(failurePage);
+    res.redirect('/pago_fallido.html');
 });
 
 // Ruta para manejar el pago pendiente
 app.get('/api/pago_pendiente', (req, res) => {
-    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
-    const pendingPage = isMobile ? '/mobile/pago_pendiente.html' : '/pago_pendiente.html';
-    res.redirect(pendingPage);
+    res.redirect('/pago_pendiente.html');
 });
 
 // Ruta para crear una solicitud y manejar el pago por transferencia
