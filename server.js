@@ -246,7 +246,6 @@ app.post('/request-password-reset', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
-// Ruta para actualizar la contraseña
 app.post('/nueva_password', async (req, res) => {
     const { token, email, newPassword } = req.body;
 
@@ -256,16 +255,31 @@ app.post('/nueva_password', async (req, res) => {
 
     try {
         const connection = await connectMySQL();
-        const sql = 'SELECT * FROM USUARIOS WHERE email = ? AND reset_token = ? AND reset_token_expiration > NOW()';
+
+        // Primero, verifica que el token y el email coinciden
+        const sql = 'SELECT * FROM USUARIOS WHERE email = ? AND reset_token = ?';
         const [rows] = await connection.execute(sql, [email, token]);
 
-        console.log('Filas encontradas:', rows);
-
         if (rows.length === 0) {
+            console.log('Token no coincide o usuario no encontrado');
             await connection.end();
             return res.status(400).send('Token inválido o expirado');
         }
 
+        // Verifica la expiración del token
+        const expirationDate = new Date(rows[0].reset_token_expiration).toISOString();
+        const currentDate = new Date().toISOString(); // Convertimos ambas fechas a UTC
+        console.log('Fecha de expiración del token en BD (UTC):', expirationDate);
+        console.log('Fecha actual en el servidor (UTC):', currentDate);
+
+        // Compara ambas fechas en formato UTC
+        if (currentDate > expirationDate) {
+            console.log('Token expirado');
+            await connection.end();
+            return res.status(400).send('Token expirado');
+        }
+
+        // Si el token es válido y no expiró, actualiza la contraseña
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         await connection.execute(
@@ -280,6 +294,7 @@ app.post('/nueva_password', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 // Ruta para obtener las marcas y modelos desde la base de datos
 app.get('/api/productos', async (req, res) => {
     try {
