@@ -237,8 +237,15 @@ app.post('/request-password-reset', async (req, res) => {
 
         await connection.end();
 
-        // Enviar el enlace de restablecimiento por correo
-        const resetLink = `https://leformal.github.io/webcli_frontend/nueva_password.html?token=${token}&email=${email}`;
+        // Detectar si el dispositivo es móvil o web
+        const userAgent = req.headers['user-agent'];
+        const isMobile = /mobile/i.test(userAgent);
+
+        // Elegir el enlace de restablecimiento según el dispositivo
+        const resetLink = isMobile 
+            ? `https://leformal.github.io/webcli_frontend/movil/nueva_password.html?token=${token}&email=${email}`
+            : `https://leformal.github.io/webcli_frontend/nueva_password.html?token=${token}&email=${email}`;
+
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
@@ -253,6 +260,7 @@ app.post('/request-password-reset', async (req, res) => {
         res.status(500).send('Error en el servidor');
     }
 });
+
 
 // Ruta para asignar nueva contraseña
 app.post('/nueva_password', async (req, res) => {
@@ -338,7 +346,6 @@ app.get('/api/productos', async (req, res) => {
 });
 
 // Ruta para crear una solicitud
-// Ruta para crear una solicitud
 app.post('/api/solicitud', async (req, res) => {
     const solicitudId = crypto.randomBytes(16).toString("hex"); // Generar un ID único para la solicitud
     const datosSolicitud = req.body;
@@ -352,6 +359,19 @@ app.post('/api/solicitud', async (req, res) => {
         
         await connection.end();
 
+        // Determinar URLs de redirección según el dispositivo
+        const successUrl = datosSolicitud.isMobile 
+            ? `https://webclimabackend-production.up.railway.app/mobile/pago_exitoso?solicitudId=${solicitudId}` 
+            : `https://webclimabackend-production.up.railway.app/pago_exitoso?solicitudId=${solicitudId}`;
+
+        const failureUrl = datosSolicitud.isMobile 
+            ? "https://webclimabackend-production.up.railway.app/mobile/pago_fallido" 
+            : "https://webclimabackend-production.up.railway.app/pago_fallido";
+
+        const pendingUrl = datosSolicitud.isMobile 
+            ? "https://webclimabackend-production.up.railway.app/mobile/pago_pendiente" 
+            : "https://webclimabackend-production.up.railway.app/pago_pendiente";
+
         // Configurar preferencia de pago en Mercado Pago
         const preference = {
             items: [
@@ -363,9 +383,9 @@ app.post('/api/solicitud', async (req, res) => {
                 },
             ],
             back_urls: {
-                success: `https://webclibackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}`,
-                failure: "https://webclibackend-production.up.railway.app/api/pago_fallido",
-                pending: "https://webclibackend-production.up.railway.app/api/pago_pendiente",
+                success: successUrl,
+                failure: failureUrl,
+                pending: pendingUrl,
             },
             auto_return: "approved",
             external_reference: solicitudId // Referencia para recuperar la solicitud en el pago
@@ -380,9 +400,11 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
+
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
     const solicitudId = req.query.solicitudId;
+    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
 
     try {
         const connection = await connectMySQL();
@@ -460,8 +482,9 @@ app.get('/api/pago_exitoso', async (req, res) => {
 
         await connection.end();
 
-        // Redirigir a la página de éxito
-        res.redirect('/pago_exitoso.html');
+        // Redirigir a la página de éxito en función del dispositivo
+        const successPage = isMobile ? '/mobile/pago_exitoso.html' : '/pago_exitoso.html';
+        res.redirect(successPage);
     } catch (error) {
         console.error('Error al guardar la solicitud y el pago:', error);
         res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
@@ -470,17 +493,23 @@ app.get('/api/pago_exitoso', async (req, res) => {
 
 // Ruta para manejar el fallo del pago
 app.get('/api/pago_fallido', (req, res) => {
-    res.redirect('/pago_fallido.html');
+    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
+    const failurePage = isMobile ? '/mobile/pago_fallido.html' : '/pago_fallido.html';
+    res.redirect(failurePage);
 });
 
 // Ruta para manejar el pago pendiente
 app.get('/api/pago_pendiente', (req, res) => {
-    res.redirect('/pago_pendiente.html');
+    const isMobile = req.query.isMobile === 'true'; // Leer si es dispositivo móvil
+    const pendingPage = isMobile ? '/mobile/pago_pendiente.html' : '/pago_pendiente.html';
+    res.redirect(pendingPage);
 });
+
 // Ruta para crear una solicitud y manejar el pago por transferencia
 app.post('/api/solicitud_transferencia', async (req, res) => {
     const datosSolicitud = req.body;
     const solicitudId = crypto.randomBytes(16).toString("hex"); // Generar un ID único para la solicitud
+    const isMobile = req.query.isMobile === 'true'; // Verificar si la solicitud es desde un dispositivo móvil
 
     try {
         const connection = await connectMySQL();
@@ -561,20 +590,25 @@ Equipo de Servicios de Climatización`
         // Enviar el correo usando Nodemailer
         await transporter.sendMail(mailOptions);
 
+        // Determinar la URL de redirección según el dispositivo
+        const redirectionUrl = isMobile ? 'mobile/pagar_transferencia.html' : 'pagar_transferencia.html';
+
         // Configurar `Content-Type` y enviar respuesta JSON
         res.setHeader('Content-Type', 'application/json');
         res.status(200).json({
             message: 'Solicitud creada con éxito. Revisa tu correo para la información de transferencia.',
-            redirectionUrl: 'pagar_transferencia.html'
+            redirectionUrl: redirectionUrl
         });
     } catch (error) {
         console.error('Error al crear la solicitud por transferencia:', error);
         res.status(500).json({ error: 'Error al procesar la solicitud de transferencia', details: error.message });
     }
 });
+
 // Ruta para actualizar perfil de usuario
 app.post('/actualizarPerfil', async (req, res) => {
     const { email, nombres, apellidos, telefono, direccion, fecha_nacimiento } = req.body;
+    const isMobile = req.query.isMobile === 'true'; // Verificar si la solicitud es desde un dispositivo móvil
 
     if (!email) {
         return res.status(400).json({ message: 'Email es requerido' });
@@ -609,6 +643,9 @@ app.post('/actualizarPerfil', async (req, res) => {
         const updatedUser = updatedUserResult[0];
         await connection.end();
 
+        // Determinar la URL de redirección según el dispositivo
+        const redirectionUrl = isMobile ? 'mobile/perfil_actualizado.html' : 'perfil_actualizado.html';
+
         // Enviar los datos actualizados al frontend
         res.status(200).json({
             message: 'Perfil actualizado',
@@ -619,7 +656,8 @@ app.post('/actualizarPerfil', async (req, res) => {
                 direccion: updatedUser.DIRECCION,
                 fecha_nacimiento: updatedUser.FECHA_NACIMIENTO,
                 email: updatedUser.EMAIL,
-            }
+            },
+            redirectionUrl: redirectionUrl // URL para redireccionar a la vista móvil o de escritorio
         });
     } catch (error) {
         console.error('Error al actualizar perfil:', error);
@@ -632,6 +670,7 @@ app.get('/obtenerSolicitudes', async (req, res) => {
     const token = req.headers['authorization'];
     console.log('Token en la solicitud'); // Confirma token en la consola
     const tokenData = verificarToken(token);
+    const isMobile = req.query.isMobile === 'true'; // Verificar si la solicitud es desde un dispositivo móvil
 
     if (!tokenData) {
         return res.status(401).json({ message: 'Token inválido' });
@@ -648,12 +687,17 @@ app.get('/obtenerSolicitudes', async (req, res) => {
 
         console.log('Solicitudes obtenidas'); // Confirma datos obtenidos
 
+        const responsePayload = {
+            solicitudes: result,
+            redirectionUrl: isMobile ? 'mobile/solicitudes.html' : 'solicitudes.html'
+        };
+
         if (expired) {
             const newToken = generarToken(email);
-            res.json({ solicitudes: result, newToken });
-        } else {
-            res.json({ solicitudes: result });
+            responsePayload.newToken = newToken;
         }
+
+        res.json(responsePayload);
 
         await connection.close();
     } catch (error) {
@@ -662,6 +706,7 @@ app.get('/obtenerSolicitudes', async (req, res) => {
     }
 });
 
+// Ruta para probar la conexión a la base de datos
 app.get('/test-db-connection', async (req, res) => {
     try {
         const connection = await connectMySQL();
@@ -673,6 +718,7 @@ app.get('/test-db-connection', async (req, res) => {
         res.status(500).send('Error al conectar con la base de datos');
     }
 });
+
 
 // Servidor en puerto 3000
 const PORT = process.env.PORT || 3000;
