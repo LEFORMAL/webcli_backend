@@ -361,16 +361,16 @@ app.post('/api/solicitud', async (req, res) => {
 
         // Determinar URLs de redirección según el dispositivo
         const successUrl = datosSolicitud.isMobile 
-            ? `https://webclimabackend-production.up.railway.app/mobile/pago_exitoso?solicitudId=${solicitudId}` 
-            : `https://webclimabackend-production.up.railway.app/pago_exitoso?solicitudId=${solicitudId}`;
+            ? `https://webclimabackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}&isMobile=true` 
+            : `https://webclimabackend-production.up.railway.app/api/pago_exitoso?solicitudId=${solicitudId}&isMobile=false`;
 
         const failureUrl = datosSolicitud.isMobile 
-            ? "https://webclimabackend-production.up.railway.app/mobile/pago_fallido" 
-            : "https://webclimabackend-production.up.railway.app/pago_fallido";
+            ? "https://webclimabackend-production.up.railway.app/api/pago_fallido?isMobile=true" 
+            : "https://webclimabackend-production.up.railway.app/api/pago_fallido?isMobile=false";
 
         const pendingUrl = datosSolicitud.isMobile 
-            ? "https://webclimabackend-production.up.railway.app/mobile/pago_pendiente" 
-            : "https://webclimabackend-production.up.railway.app/pago_pendiente";
+            ? "https://webclimabackend-production.up.railway.app/api/pago_pendiente?isMobile=true" 
+            : "https://webclimabackend-production.up.railway.app/api/pago_pendiente?isMobile=false";
 
         // Configurar preferencia de pago en Mercado Pago
         const preference = {
@@ -400,6 +400,7 @@ app.post('/api/solicitud', async (req, res) => {
         res.status(500).json({ error: 'Error al crear la preferencia de pago', details: error.message });
     }
 });
+
 
 // Ruta para manejar el éxito del pago
 app.get('/api/pago_exitoso', async (req, res) => {
