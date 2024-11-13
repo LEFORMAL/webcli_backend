@@ -871,6 +871,34 @@ app.put('/api/actualizarEstado', async (req, res) => {
         res.status(500).json({ error: 'Error al actualizar el estado' });
     }
 });
+// Ruta para obtener el historial de asignaciones finalizadas del técnico
+app.get('/api/historial_asignaciones', async (req, res) => {
+    const nombre = req.query.nombre;
+
+    if (!nombre) {
+        return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio." });
+    }
+
+    try {
+        const connection = await connectMySQL();
+
+        const [result] = await connection.execute(
+            `SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
+                    direccion AS "DIRECCION", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", 
+                    estado_solicitud AS "ESTADO_SOLICITUD"
+             FROM SOLICITUD
+             WHERE tecnico_asignado = ? AND estado_solicitud = 'Finalizada'`,
+            [nombre]
+        );
+
+        res.json({ solicitudes: result });
+
+        await connection.close();
+    } catch (error) {
+        console.error('Error al obtener el historial de asignaciones:', error);
+        res.status(500).json({ error: 'Error al obtener el historial de asignaciones' });
+    }
+});
 
 
 
