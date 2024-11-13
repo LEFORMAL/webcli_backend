@@ -474,12 +474,13 @@ app.get('/api/pago_exitoso', async (req, res) => {
 
 // Ruta para manejar el fallo del pago
 app.get('/api/pago_fallido', (req, res) => {
-    res.redirect('/pago_fallido.html');
+    res.redirect('https://leformal.github.io/webcli_frontend/pago_fallido.html');
 });
+
 
 // Ruta para manejar el pago pendiente
 app.get('/api/pago_pendiente', (req, res) => {
-    res.redirect('/pago_pendiente.html');
+    res.redirect('https://leformal.github.io/webcli_frontend/pago_pendiente.html');
 });
 
 // Ruta para crear una solicitud y manejar el pago por transferencia
