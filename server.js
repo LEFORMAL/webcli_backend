@@ -320,8 +320,6 @@ app.post('/nueva_password', async (req, res) => {
     }
 });
 
-
-
 // Ruta para obtener las marcas y modelos desde la base de datos
 app.get('/api/productos', async (req, res) => {
     try {
