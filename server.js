@@ -809,12 +809,10 @@ app.put('/api/solicitud/asignar', async (req, res) => {
         res.status(500).json({ error: 'Error al asignar técnico a la solicitud', details: error.message });
     }
 });
-
 // Ruta para obtener las asignaciones del técnico
 app.get('/api/mis_asignaciones', async (req, res) => {
     const nombre = req.query.nombre; // Obtener el nombre del técnico desde los parámetros de la URL
 
-    // Verificar que el nombre esté definido
     if (!nombre) {
         return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio." });
     }
@@ -822,7 +820,7 @@ app.get('/api/mis_asignaciones', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
-        // Consultar solicitudes donde el técnico asignado es el que está logueado
+        // Consultar solicitudes donde el técnico asignado es el que está logueado y el estado no es "Finalizada"
         const [result] = await connection.execute(
             `SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
                    direccion AS "DIRECCION", comuna AS "COMUNA", region AS "REGION", rut_usuario AS "RUT_USUARIO", 
@@ -831,13 +829,12 @@ app.get('/api/mis_asignaciones', async (req, res) => {
                    necesita_compra AS "NECESITA_COMPRA", fecha_realizacion AS "FECHA_REALIZACION", medio_pago AS "MEDIO_PAGO", 
                    costo_total AS "COSTO_TOTAL", tecnico_asignado AS "TECNICO_ASIGNADO", estado_solicitud AS "ESTADO_SOLICITUD"
             FROM SOLICITUD
-            WHERE tecnico_asignado = ?`,
+            WHERE tecnico_asignado = ? AND estado_solicitud != 'Finalizada'`, // Filtra para excluir las finalizadas
             [nombre]
         );
 
+        await connection.end();
         res.json({ solicitudes: result });
-
-        await connection.close();
     } catch (error) {
         console.error('Error al obtener las asignaciones:', error);
         res.status(500).json({ error: 'Error al obtener las asignaciones' });
