@@ -843,6 +843,37 @@ app.get('/api/mis_asignaciones', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener las asignaciones' });
     }
 });
+// Ruta para actualizar el estado de una solicitud
+app.put('/api/actualizarEstado', async (req, res) => {
+    const { idSolicitud, nuevoEstado } = req.body;
+
+    // Validar que todos los parámetros están presentes
+    if (!idSolicitud || !nuevoEstado) {
+        return res.status(400).json({ error: "Faltan datos para actualizar el estado" });
+    }
+
+    try {
+        const connection = await connectMySQL();
+
+        // Actualizar el estado de la solicitud
+        const [result] = await connection.execute(
+            `UPDATE SOLICITUD SET estado_solicitud = ? WHERE id_solicitud = ?`,
+            [nuevoEstado, idSolicitud]
+        );
+
+        await connection.end();
+
+        // Verificar si la actualización fue exitosa
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Solicitud no encontrada" });
+        }
+
+        res.json({ message: 'Estado actualizado con éxito' });
+    } catch (error) {
+        console.error('Error al actualizar el estado:', error);
+        res.status(500).json({ error: 'Error al actualizar el estado' });
+    }
+});
 
 
 
