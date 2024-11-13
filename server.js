@@ -724,6 +724,35 @@ app.post('/add-servicio', async (req, res) => {
     }
 });
 
+// Ruta para obtener todas las solicitudes (sin verificación de usuario o token)
+app.get('/api/obtenerTodasLasSolicitudes', async (req, res) => {
+    try {
+        const connection = await connectMySQL();
+
+        // Obtener todas las solicitudes sin filtrar
+        const [result] = await connection.execute(`
+            SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
+                   direccion AS "DIRECCION", comuna AS "COMUNA", region AS "REGION", rut_usuario AS "RUT_USUARIO", 
+                   nombre AS "NOMBRE", rut_nit AS "RUT_NIT", telefono AS "TELEFONO", email AS "EMAIL", 
+                   cantidad_productos AS "CANTIDAD_PRODUCTOS", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", 
+                   necesita_compra AS "NECESITA_COMPRA", fecha_realizacion AS "FECHA_REALIZACION", medio_pago AS "MEDIO_PAGO", 
+                   costo_total AS "COSTO_TOTAL", fecha_creacion AS "FECHA_CREACION", estado AS "ESTADO", tecnico_asignado AS "TECNICO_ASIGNADO"
+            FROM SOLICITUD
+        `);
+
+        console.log('Todas las solicitudes obtenidas');
+
+        res.status(200).json({ solicitudes: result });
+
+        await connection.close();
+    } catch (error) {
+        console.error('Error al obtener todas las solicitudes:', error);
+        res.status(500).send('Error al obtener todas las solicitudes');
+    }
+});
+
+
+
 // Endpoint para obtener solicitudes pendientes
 app.get('/api/solicitudes-pendientes', async (req, res) => {
     try {
