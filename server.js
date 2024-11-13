@@ -744,7 +744,7 @@ app.get('/api/tecnicos', async (req, res) => {
     try {
         const connection = await connectMySQL();
         const [rows] = await connection.execute(
-            `SELECT id, nombre FROM USUARIOS WHERE user_tipo = 'tecnico'`
+            `SELECT rut, nombres, apellidos FROM USUARIOS WHERE user_tipo = 'tecnico'`
         );
         await connection.end();
 
