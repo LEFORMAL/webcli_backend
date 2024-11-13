@@ -812,14 +812,12 @@ app.put('/api/solicitud/asignar', async (req, res) => {
 
 // Ruta para obtener las asignaciones del técnico
 app.get('/api/mis_asignaciones', async (req, res) => {
-    const token = req.headers['authorization'];
-    const tokenData = verificarToken(token);
+    const nombre = req.query.nombre; // Obtener el nombre del técnico desde los parámetros de la URL
 
-    if (!tokenData) {
-        return res.status(401).json({ message: 'Token inválido' });
+    // Verificar que el nombre esté definido
+    if (!nombre) {
+        return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio." });
     }
-
-    const { nombre } = tokenData;
 
     try {
         const connection = await connectMySQL();
@@ -845,6 +843,7 @@ app.get('/api/mis_asignaciones', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener las asignaciones' });
     }
 });
+
 
 
 
