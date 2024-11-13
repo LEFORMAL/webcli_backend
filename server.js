@@ -724,6 +724,64 @@ app.post('/add-servicio', async (req, res) => {
     }
 });
 
+// Endpoint para obtener solicitudes pendientes
+app.get('/api/solicitudes-pendientes', async (req, res) => {
+    try {
+        const connection = await connectMySQL();
+        const [rows] = await connection.execute(
+            `SELECT * FROM SOLICITUD WHERE estado_solicitud = 'Pendiente'`
+        );
+        await connection.end();
+
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error al obtener solicitudes pendientes:', error);
+        res.status(500).json({ error: 'Error al obtener solicitudes pendientes' });
+    }
+});
+// Endpoint para obtener técnicos disponibles
+app.get('/api/tecnicos', async (req, res) => {
+    try {
+        const connection = await connectMySQL();
+        const [rows] = await connection.execute(
+            `SELECT id, nombre FROM USUARIOS WHERE user_tipo = 'tecnico'`
+        );
+        await connection.end();
+
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error al obtener técnicos:', error);
+        res.status(500).json({ error: 'Error al obtener técnicos' });
+    }
+});
+// Endpoint para asignar técnico y fecha de realización a una solicitud
+app.put('/api/solicitud/asignar', async (req, res) => {
+    const { solicitudId, tecnicoId, fechaRealizacion } = req.body;
+
+    if (!solicitudId || !tecnicoId || !fechaRealizacion) {
+        return res.status(400).json({ error: 'Faltan datos para realizar la asignación.' });
+    }
+
+    try {
+        const connection = await connectMySQL();
+
+        // Actualizar los datos de la solicitud en la base de datos
+        const sqlUpdate = `
+            UPDATE SOLICITUD 
+            SET tecnico_asignado = ?, estado_solicitud = 'Asignado', fecha_realizacion = ?
+            WHERE id = ?`;
+
+        await connection.execute(sqlUpdate, [tecnicoId, fechaRealizacion, solicitudId]);
+        await connection.end();
+
+        res.status(200).json({ message: 'Técnico asignado con éxito y fecha de realización actualizada' });
+    } catch (error) {
+        console.error('Error al asignar técnico:', error);
+        res.status(500).json({ error: 'Error al asignar técnico a la solicitud', details: error.message });
+    }
+});
+
+
 
 
 // Servidor en puerto 3000
