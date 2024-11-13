@@ -696,6 +696,34 @@ app.get('/test-db-connection', async (req, res) => {
         res.status(500).send('Error al conectar con la base de datos');
     }
 });
+//Ruta añadir tipo solicitud
+app.post('/add-servicio', async (req, res) => {
+    // Verificar si el usuario es administrador
+    const { user_tipo } = req.body;
+    if (user_tipo !== 'admin') {
+        return res.status(403).send('Acceso denegado');
+    }
+
+    const { nombre } = req.body;
+
+    if (!nombre) {
+        return res.status(400).send('El nombre del servicio es obligatorio');
+    }
+
+    try {
+        const connection = await connectMySQL();
+
+        const sql = `INSERT INTO tipos_solicitud (nombre) VALUES (:nombre)`;
+        await connection.execute(sql, { nombre });
+
+        res.status(200).send('Servicio agregado con éxito');
+        await connection.end();
+    } catch (err) {
+        console.error('Error al agregar servicio:', err);
+        res.status(500).send('Error al agregar el servicio');
+    }
+});
+
 
 
 // Servidor en puerto 3000
