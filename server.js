@@ -810,6 +810,43 @@ app.put('/api/solicitud/asignar', async (req, res) => {
     }
 });
 
+// Ruta para obtener las asignaciones del técnico
+app.get('/api/mis_asignaciones', async (req, res) => {
+    const token = req.headers['authorization'];
+    const tokenData = verificarToken(token);
+
+    if (!tokenData) {
+        return res.status(401).json({ message: 'Token inválido' });
+    }
+
+    const { nombre } = tokenData;
+
+    try {
+        const connection = await connectMySQL();
+
+        // Consultar solicitudes donde el técnico asignado es el que está logueado
+        const [result] = await connection.execute(
+            `SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
+                   direccion AS "DIRECCION", comuna AS "COMUNA", region AS "REGION", rut_usuario AS "RUT_USUARIO", 
+                   nombre AS "NOMBRE", rut_nit AS "RUT_NIT", telefono AS "TELEFONO", email AS "EMAIL", 
+                   cantidad_productos AS "CANTIDAD_PRODUCTOS", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", 
+                   necesita_compra AS "NECESITA_COMPRA", fecha_realizacion AS "FECHA_REALIZACION", medio_pago AS "MEDIO_PAGO", 
+                   costo_total AS "COSTO_TOTAL", tecnico_asignado AS "TECNICO_ASIGNADO", estado_solicitud AS "ESTADO_SOLICITUD"
+            FROM SOLICITUD
+            WHERE tecnico_asignado = ?`,
+            [nombre]
+        );
+
+        res.json({ solicitudes: result });
+
+        await connection.close();
+    } catch (error) {
+        console.error('Error al obtener las asignaciones:', error);
+        res.status(500).json({ error: 'Error al obtener las asignaciones' });
+    }
+});
+
+
 
 
 
