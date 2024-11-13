@@ -785,22 +785,22 @@ app.get('/api/tecnicos', async (req, res) => {
 });
 // Endpoint para asignar técnico y fecha de realización a una solicitud
 app.put('/api/solicitud/asignar', async (req, res) => {
-    const { solicitudId, tecnicoId, fechaRealizacion } = req.body;
+    const { solicitudId, tecnicoNombre, fechaRealizacion } = req.body; // Cambia tecnicoId a tecnicoNombre
 
-    if (!solicitudId || !tecnicoId || !fechaRealizacion) {
+    if (!solicitudId || !tecnicoNombre || !fechaRealizacion) {
         return res.status(400).json({ error: 'Faltan datos para realizar la asignación.' });
     }
 
     try {
         const connection = await connectMySQL();
 
-        // Actualizar los datos de la solicitud en la base de datos
+        // Actualizar la solicitud con el nombre completo del técnico
         const sqlUpdate = `
             UPDATE SOLICITUD 
             SET tecnico_asignado = ?, estado_solicitud = 'Asignado', fecha_realizacion = ?
-            WHERE ID_SOLICITUD = ?`;
+            WHERE id_solicitud = ?`;
 
-        await connection.execute(sqlUpdate, [tecnicoId, fechaRealizacion, solicitudId]);
+        await connection.execute(sqlUpdate, [tecnicoNombre, fechaRealizacion, solicitudId]);
         await connection.end();
 
         res.status(200).json({ message: 'Técnico asignado con éxito y fecha de realización actualizada' });
@@ -809,6 +809,7 @@ app.put('/api/solicitud/asignar', async (req, res) => {
         res.status(500).json({ error: 'Error al asignar técnico a la solicitud', details: error.message });
     }
 });
+
 
 
 
