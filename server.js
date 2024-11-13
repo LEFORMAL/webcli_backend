@@ -736,7 +736,7 @@ app.get('/api/obtenerTodasLasSolicitudes', async (req, res) => {
                    nombre AS "NOMBRE", rut_nit AS "RUT_NIT", telefono AS "TELEFONO", email AS "EMAIL", 
                    cantidad_productos AS "CANTIDAD_PRODUCTOS", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", 
                    necesita_compra AS "NECESITA_COMPRA", fecha_realizacion AS "FECHA_REALIZACION", medio_pago AS "MEDIO_PAGO", 
-                   costo_total AS "COSTO_TOTAL", fecha_creacion AS "FECHA_CREACION", estado AS "ESTADO", tecnico_asignado AS "TECNICO_ASIGNADO"
+                   costo_total AS "COSTO_TOTAL", fecha_creacion AS "FECHA_CREACION", estado_solicitud AS "ESTADO", tecnico_asignado AS "TECNICO_ASIGNADO"
             FROM SOLICITUD
         `);
 
