@@ -798,7 +798,7 @@ app.put('/api/solicitud/asignar', async (req, res) => {
         const sqlUpdate = `
             UPDATE SOLICITUD 
             SET tecnico_asignado = ?, estado_solicitud = 'Asignado', fecha_realizacion = ?
-            WHERE id = ?`;
+            WHERE ID_SOLICITUD = ?`;
 
         await connection.execute(sqlUpdate, [tecnicoId, fechaRealizacion, solicitudId]);
         await connection.end();
