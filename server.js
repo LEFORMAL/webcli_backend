@@ -404,10 +404,8 @@ app.get('/api/pago_exitoso', async (req, res) => {
 
         // Verificar si datos ya está en formato JSON
         let datosSolicitud = rows[0].datos;
-        console.log("Contenido de datos antes de parsear:", datosSolicitud); // Depuración
-
         if (typeof datosSolicitud === 'string') {
-            datosSolicitud = JSON.parse(datosSolicitud); // Solo parseamos si es una cadena
+            datosSolicitud = JSON.parse(datosSolicitud);
         }
 
         // Insertar la solicitud en la tabla SOLICITUD
@@ -465,13 +463,14 @@ app.get('/api/pago_exitoso', async (req, res) => {
 
         await connection.end();
 
-        // Redirigir a la página de éxito
-        res.redirect('/pago_exitoso.html');
+        // Redirigir a la página de éxito en GitHub Pages
+        res.redirect(`https://leformal.github.io/webcli_frontend/pago_exitoso.html?solicitudId=${solicitudId}`);
     } catch (error) {
         console.error('Error al guardar la solicitud y el pago:', error);
         res.status(500).json({ error: 'Error al guardar la solicitud y el pago', details: error.message });
     }
 });
+
 
 // Ruta para manejar el fallo del pago
 app.get('/api/pago_fallido', (req, res) => {
