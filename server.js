@@ -884,7 +884,7 @@ app.get('/api/historial_asignaciones', async (req, res) => {
         const connection = await connectMySQL();
 
         const [result] = await connection.execute(
-            `SELECT id_solicitud AS "ID_SOLICITUD", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
+            `SELECT id_solicitud AS "ID_SOLICITUD",nombre AS "NOMBRE", tipo_solicitud AS "TIPO_SOLICITUD", fecha_solicitud AS "FECHA_SOLICITUD", 
                     direccion AS "DIRECCION", marca_producto AS "MARCA_PRODUCTO", modelo_producto AS "MODELO_PRODUCTO", 
                     estado_solicitud AS "ESTADO_SOLICITUD"
              FROM SOLICITUD
