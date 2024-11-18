@@ -735,6 +735,67 @@ app.post('/add-servicio', async (req, res) => {
     }
 });
 
+// Ruta para añadir marcas y productos
+app.post('/add-producto', async (req, res) => {
+    const { user_tipo, nombre_marca, modelo_producto, valor_producto } = req.body;
+
+    // Verificar si el usuario es administrador
+    if (user_tipo !== 'admin') {
+        return res.status(403).send('Acceso denegado');
+    }
+
+    // Validar datos obligatorios
+    if (!nombre_marca || !modelo_producto || !valor_producto) {
+        return res.status(400).send('Todos los campos (nombre de marca, modelo y valor) son obligatorios');
+    }
+
+    try {
+        const connection = await connectMySQL();
+
+        // Verificar si la marca ya existe
+        const [marcaExistente] = await connection.execute(
+            'SELECT ID_MARCA FROM MARCAS WHERE NOMBRE_MARCA = :nombre_marca',
+            { nombre_marca }
+        );
+
+        let id_marca;
+        if (marcaExistente.length > 0) {
+            // Marca ya existe
+            id_marca = marcaExistente[0].ID_MARCA;
+        } else {
+            // Insertar la nueva marca
+            const [resultadoMarca] = await connection.execute(
+                'INSERT INTO MARCAS (NOMBRE_MARCA) VALUES (:nombre_marca)',
+                { nombre_marca }
+            );
+            id_marca = resultadoMarca.insertId; // Obtener el ID de la nueva marca
+        }
+
+        // Validar si el producto ya existe para la misma marca
+        const [productoExistente] = await connection.execute(
+            'SELECT ID_PRODUCTO FROM PRODUCTOS WHERE MODELO_PRODUCTO = :modelo_producto AND ID_MARCA = :id_marca',
+            { modelo_producto, id_marca }
+        );
+
+        if (productoExistente.length > 0) {
+            return res.status(400).send('El producto ya existe para esta marca');
+        }
+
+        // Insertar el producto
+        await connection.execute(
+            'INSERT INTO PRODUCTOS (MODELO_PRODUCTO, VALOR_PRODUCTO, ID_MARCA) VALUES (:modelo_producto, :valor_producto, :id_marca)',
+            { modelo_producto, valor_producto, id_marca }
+        );
+
+        res.status(200).send('Producto y marca agregados con éxito (o asociados si la marca ya existía)');
+        await connection.end();
+    } catch (err) {
+        console.error('Error al agregar producto o marca:', err);
+        res.status(500).send('Error al agregar el producto o la marca');
+    }
+});
+
+
 // Ruta para obtener todas las solicitudes (sin verificación de usuario o token)
 app.get('/api/obtenerTodasLasSolicitudes', async (req, res) => {
     try {
