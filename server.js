@@ -44,7 +44,7 @@ async function connectMySQL() {
 app.get('/api/tipos_solicitud', async (req, res) => {
     try {
         const connection = await connectMySQL();
-        const [rows] = await connection.execute('SELECT * FROM tipos_solicitud');
+        const [rows] = await connection.execute('SELECT * FROM SERVICIOS');
         await connection.end();
         res.json(rows);
     } catch (error) {
@@ -724,7 +724,7 @@ app.post('/add-servicio', async (req, res) => {
     try {
         const connection = await connectMySQL();
 
-        const sql = `INSERT INTO tipos_solicitud (nombre) VALUES (:nombre)`;
+        const sql = `INSERT INTO SERVICIOS (nombre) VALUES (:nombre)`;
         await connection.execute(sql, { nombre });
 
         res.status(200).send('Servicio agregado con éxito');
