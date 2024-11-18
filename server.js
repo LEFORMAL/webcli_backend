@@ -320,13 +320,22 @@ app.post('/nueva_password', async (req, res) => {
     }
 });
 
-// Ruta para obtener las marcas y modelos desde la base de datos
+// Ruta para obtener las marcas, modelos y precios desde la base de datos
 app.get('/api/productos', async (req, res) => {
     try {
         const connection = await connectMySQL();
         console.log("Conexión establecida correctamente");
 
-        const sql = 'SELECT DISTINCT MARCA_PRODUCTO, MODELO_PRODUCTO, VALOR_PRODUCTO FROM PRODUCTOS ORDER BY MARCA_PRODUCTO, MODELO_PRODUCTO';
+        // Nueva consulta con JOIN entre PRODUCTOS y MARCAS
+        const sql = `
+            SELECT DISTINCT 
+                M.NOMBRE_MARCA AS MARCA_PRODUCTO, 
+                P.MODELO_PRODUCTO, 
+                P.VALOR_PRODUCTO
+            FROM PRODUCTOS P
+            JOIN MARCAS M ON P.ID_MARCA = M.ID_MARCA
+            ORDER BY M.NOMBRE_MARCA, P.MODELO_PRODUCTO;
+        `;
         const [rows] = await connection.execute(sql);
 
         console.log("Consulta exitosa");
@@ -342,6 +351,7 @@ app.get('/api/productos', async (req, res) => {
         return res.status(500).json({ message: 'Error al obtener productos' });
     }
 });
+
 
 // Ruta para crear una solicitud
 app.post('/api/solicitud', async (req, res) => {
