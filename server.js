@@ -110,6 +110,7 @@ function verificarToken(token) {
     }
 }
 
+
 // Ruta para registrar usuarios
 app.post('/register', async (req, res) => {
     const { rut, nombres, apellidos, user_tipo, email, telefono, direccion, comuna, region, fecha_nacimiento, contrasena } = req.body;
