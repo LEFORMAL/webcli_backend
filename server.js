@@ -913,6 +913,7 @@ app.get('/api/mis_asignaciones', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener las asignaciones' });
     }
 });
+
 // Ruta para actualizar el estado de una solicitud
 app.put('/api/actualizarEstado', async (req, res) => {
     const { idSolicitud, nuevoEstado } = req.body;
